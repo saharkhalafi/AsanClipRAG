@@ -1,0 +1,112 @@
+services:
+  app:
+    build: .
+    container_name: asanclip-rag
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: 1
+      DATABASE_URL: postgresql+psycopg2://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-Sale1404}
+      REDIS_URL: redis://redis:6379/0
+      AUTO_IMPORT_SALE1404: ${AUTO_IMPORT_SALE1404:-true}
+      SEED_DATABASE: ${SEED_DATABASE:-false}
+      SALE1404_SQL_PATH: /app/Sale1404.sql
+      MIN_PRODUCTS_FOR_IMPORT: ${MIN_PRODUCTS_FOR_IMPORT:-100}
+    volumes:
+      - .:/app
+      - ./migrations:/app/migrations
+      - ./logs:/app/logs
+      - ./indexes:/app/indexes
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+
+  migration:
+    profiles: ["tools"]
+    build: .
+    container_name: asanclip-migration
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-Sale1404}
+    volumes:
+      - .:/app
+      - ./migrations:/app/migrations
+    entrypoint: []
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+
+  import-db:
+    profiles: ["tools"]
+    build: .
+    container_name: asanclip-import-db
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-Sale1404}
+      SALE1404_SQL_PATH: /app/Sale1404.sql
+    volumes:
+      - .:/app
+    entrypoint: []
+    command: ["python", "scripts/import_sale1404_products.py", "--truncate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migration:
+        condition: service_completed_successfully
+
+
+  redis:
+    image: redis:7-alpine
+    container_name: asanclip-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: asanclip-postgres
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-Sale1404}
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-Sale1404}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+volumes:
+  redis_data:
+  postgres_data:

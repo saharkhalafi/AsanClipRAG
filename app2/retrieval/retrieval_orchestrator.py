@@ -1,0 +1,284 @@
+# app2/retrieval/retrieval_orchestrator.py
+
+from typing import Dict, Any, List, Optional
+import time
+import numpy as np
+from concurrent.futures import ThreadPoolExecutor
+
+from app2.retrieval.vector_search import VectorSearchService
+from app2.retrieval.bm25_search import BM25SearchService
+from app2.retrieval.metadata_search import MetadataSearchService
+from app2.services.retrieval_quality import RetrievalQualityModel
+from app2.routing.query_router import QueryRouter
+
+
+class RetrievalOrchestrator:
+    """
+    Production-safe retrieval controller with parallel execution and smart retry.
+    """
+
+    def __init__(
+        self,
+        vector_search,
+        bm25_search,
+        metadata_search,
+        quality_model,
+        router,
+        max_retries: int = 2,
+        quality_threshold: float = 0.55,
+        mode_timeouts: Optional[Dict[str, float]] = None,
+    ):
+        self.vector_search = vector_search
+        self.bm25_search = bm25_search
+        self.metadata_search = metadata_search
+        self.rqm = quality_model
+        self.router = router
+        self.max_retries = max(0, int(max_retries))
+        self.quality_threshold = float(quality_threshold)
+        self.mode_timeouts = mode_timeouts or {
+            "vector": 1.50,
+            "hybrid": 2.50,
+            "lexical": 1.80,
+        }
+
+    # -------------------------------------------------
+    # MODE HELPERS
+    # -------------------------------------------------
+    def _next_mode(self, current_mode: str, router_mode: Optional[str] = None) -> str:
+        current_mode = (current_mode or "vector").lower()
+        router_mode = (router_mode or "").lower()
+        if current_mode == "vector":
+            if router_mode in {"hybrid", "lexical"} and router_mode != "vector":
+                return router_mode
+            return "hybrid"
+        if current_mode == "hybrid":
+            return "lexical"
+        return "lexical"
+
+    def _mode_budget(self, mode: str) -> float:
+        return float(self.mode_timeouts.get((mode or "vector").lower(), 2.0))
+
+    def _normalize_vector_result(self, row: Dict[str, Any]) -> Dict[str, Any]:
+        item = dict(row)
+        distance = float(item.get("distance", 1.0))
+        vector_score = max(0.0, 1.0 - distance)
+        item["vector_score"] = float(vector_score)
+        item["bm25_score"] = float(item.get("bm25_score", 0.0))
+        item["final_score"] = float(item.get("final_score", vector_score))
+        item["source"] = item.get("source", "vector")
+        return item
+
+    def _normalize_bm25_result(self, row: Dict[str, Any]) -> Dict[str, Any]:
+        item = dict(row)
+        item["vector_score"] = float(item.get("vector_score", 0.0))
+        item["bm25_score"] = float(item.get("bm25_score", 0.0))
+        item["final_score"] = float(item.get("final_score", item["bm25_score"]))
+        item["source"] = item.get("source", "bm25")
+        return item
+
+    def _merge_vector_bm25(
+        self,
+        vector_results: List[Dict[str, Any]],
+        bm25_results: List[Dict[str, Any]],
+        bm25_rescue_limit: int = 5,
+    ) -> List[Dict[str, Any]]:
+        """Safe hybrid merge"""
+        if not vector_results and not bm25_results:
+            return []
+
+        normalized_vec = [self._normalize_vector_result(r) for r in vector_results]
+        normalized_bm25 = [self._normalize_bm25_result(r) for r in bm25_results]
+
+        bm25_map = {r["id"]: r for r in normalized_bm25 if r.get("id") is not None}
+        max_bm25 = max((r.get("bm25_score", 0.0) for r in normalized_bm25), default=0.0) or 1.0
+
+        merged: List[Dict[str, Any]] = []
+        seen_ids = set()
+
+        # Primary vector + BM25 overlap boost
+        for r in normalized_vec:
+            doc_id = r.get("id")
+            seen_ids.add(doc_id)
+            vector_score = float(r.get("vector_score", 0.0))
+            bm25_score = float(bm25_map.get(doc_id, {}).get("bm25_score", 0.0)) / max_bm25
+            final_score = (0.92 * vector_score) + (0.08 * bm25_score)
+            merged.append({
+                **r,
+                "vector_score": vector_score,
+                "bm25_score": bm25_score,
+                "final_score": final_score,
+                "source": r.get("source", "vector"),
+            })
+
+        # BM25-only rescue set
+        bm25_only = [r for r in normalized_bm25 if r.get("id") not in seen_ids]
+        bm25_only.sort(key=lambda x: x.get("bm25_score", 0.0), reverse=True)
+
+        for r in bm25_only[:bm25_rescue_limit]:
+            bm25_score = float(r.get("bm25_score", 0.0)) / max_bm25
+            merged.append({
+                **r,
+                "vector_score": 0.0,
+                "bm25_score": bm25_score,
+                "final_score": 0.25 * bm25_score,
+                "source": "bm25",
+            })
+
+        merged.sort(key=lambda x: x.get("final_score", 0.0), reverse=True)
+        return merged
+
+    # -------------------------------------------------
+    # PARALLEL MODE EXECUTION
+    # -------------------------------------------------
+    def _run_parallel_modes(
+        self,
+        query: str,
+        query_vector: np.ndarray,
+        filters: Dict[str, Any],
+        candidate_ids: Optional[List[int]],
+    ) -> Dict[str, Any]:
+        """Run vector + BM25 in parallel"""
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future_vector = executor.submit(
+                self.vector_search.search,
+                query_vector=query_vector,
+                candidate_ids=candidate_ids,
+                limit=50,
+            )
+            future_bm25 = executor.submit(
+                self.bm25_search.search,
+                query=query,
+                limit=50,
+                filters=filters,
+                candidate_ids=candidate_ids,
+            )
+
+            vec_results = future_vector.result()
+            bm25_results = future_bm25.result()
+
+        return {
+            "vector": [self._normalize_vector_result(r) for r in vec_results],
+            "bm25": [self._normalize_bm25_result(r) for r in bm25_results],
+        }
+
+    # -------------------------------------------------
+    # MAIN RETRIEVAL PIPELINE
+    # -------------------------------------------------
+    def run(
+        self,
+        query: str,
+        query_vector: np.ndarray,
+        filters: Dict[str, Any],
+        semantic: Dict[str, Any],
+        candidate_ids: Optional[List[int]] = None,
+    ) -> Dict[str, Any]:
+        started_at = time.monotonic()
+        attempt_history: List[Dict[str, Any]] = []
+        current_mode = "vector"
+        best_bundle: Optional[Dict[str, Any]] = None
+        last_quality: Dict[str, Any] = {}
+        last_route = None
+
+        for attempt_idx in range(self.max_retries + 1):
+            if (time.monotonic() - started_at) > self._mode_budget(current_mode):
+                break
+
+            mode_started = time.monotonic()
+
+            # Parallel Vector + BM25
+            if current_mode in ("vector", "hybrid"):
+                parallel_results = self._run_parallel_modes(
+                    query=query,
+                    query_vector=query_vector,
+                    filters=filters,
+                    candidate_ids=candidate_ids,
+                )
+
+                if current_mode == "vector":
+                    results = parallel_results["vector"]
+                else:
+                    results = self._merge_vector_bm25(
+                        parallel_results["vector"],
+                        parallel_results["bm25"],
+                    )
+            else:  # lexical
+                bm25_results = self.bm25_search.search(
+                    query=query,
+                    limit=80,
+                    filters=filters,
+                    candidate_ids=candidate_ids,
+                )
+                results = [self._normalize_bm25_result(r) for r in bm25_results]
+
+            mode_elapsed = time.monotonic() - mode_started
+
+            quality = self.rqm.compute(results=results, query=query)
+            route = self.router.route(
+                query=query,
+                retrieval_quality=quality,
+                filters=filters,
+            )
+
+            score = float(quality.get("retrieval_quality", 0.0))
+
+            attempt_entry = {
+                "attempt": attempt_idx,
+                "mode": current_mode,
+                "result_count": len(results),
+                "quality": quality,
+                "route_mode": getattr(route, "mode", None),
+                "route_reason": getattr(route, "reason", None),
+                "elapsed_sec": round(mode_elapsed, 6),
+            }
+            attempt_history.append(attempt_entry)
+
+            bundle = {
+                "mode": current_mode,
+                "results": results,
+                "quality": quality,
+                "route": route,
+                "score": score,
+                "attempt": attempt_idx,
+                "elapsed_sec": mode_elapsed,
+            }
+
+            if best_bundle is None or score > best_bundle["score"]:
+                best_bundle = bundle
+
+            last_quality = quality
+            last_route = route
+
+            if score >= self.quality_threshold:
+                break
+
+            if attempt_idx >= self.max_retries:
+                break
+
+            next_mode = self._next_mode(current_mode, getattr(route, "mode", None))
+            if next_mode == current_mode:
+                break
+            current_mode = next_mode
+
+        if best_bundle is None:
+            best_bundle = {
+                "mode": "vector",
+                "results": [],
+                "quality": {"retrieval_quality": 0.0, "decision": "fallback", "signals": {}},
+                "route": None,
+                "score": 0.0,
+                "attempt": 0,
+                "elapsed_sec": 0.0,
+            }
+
+        return {
+            "mode": best_bundle["mode"],
+            "results": best_bundle["results"],
+            "quality": best_bundle["quality"],
+            "route": best_bundle["route"],
+            "retry_triggered": len(attempt_history) > 1,
+            "attempt_history": attempt_history,
+            "attempt_count": len(attempt_history),
+            "best_score": best_bundle["score"],
+            "last_quality": last_quality,
+            "last_route_mode": getattr(last_route, "mode", None),
+        }
