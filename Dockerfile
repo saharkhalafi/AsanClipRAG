@@ -30,7 +30,7 @@ RUN python -m pip install --upgrade pip && \
         --timeout=120 \
         --retries=10 \
         -r requirements.txt && \
-    python -m spacy download en_core_web_lg
+    python -m spacy download en_core_web_sm
 
 
 
