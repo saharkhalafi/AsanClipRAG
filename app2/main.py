@@ -11,6 +11,13 @@ from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 
 # ======================
+# Sentry
+# ======================
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+
+# ======================
 # App imports
 # ======================
 from app2.core.settings import get_settings
@@ -35,6 +42,26 @@ from app2.monitoring.health import router as health_router
 # Settings & Lifespan
 # ======================
 settings = get_settings()
+
+
+# ======================
+# Sentry Init
+# ======================
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        integrations=[
+            FastApiIntegration(),
+            SqlalchemyIntegration(),
+        ],
+        traces_sample_rate=0.2,          # 20% of requests for performance monitoring
+        profiles_sample_rate=0.1,
+        environment=settings.ENVIRONMENT,
+        send_default_pii=False,          # Don't send sensitive user data
+    )
+    logging.info("✅ Sentry initialized")
+else:
+    logging.info("ℹ️ Sentry DSN not set — skipping Sentry")
 
 
 @asynccontextmanager
@@ -99,8 +126,6 @@ async def root():
         "version": "1.0.0",
         "docs": "/docs"
     }
-
-
 # ======================
 # Run
 # ======================

@@ -1,10 +1,11 @@
 from typing import Any, Dict, List, cast
 
-from presidio_analyzer import AnalyzerEngine
-from presidio_analyzer import RecognizerResult
-
+from presidio_analyzer import AnalyzerEngine, RecognizerResult
+from presidio_analyzer.nlp_engine import NlpEngineProvider
 from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
+
+SPACY_MODEL = "en_core_web_sm"
 
 
 class PIIDetector:
@@ -13,7 +14,13 @@ class PIIDetector:
     """
 
     def __init__(self) -> None:
-        self.analyzer = AnalyzerEngine()
+        nlp_engine = NlpEngineProvider(
+            nlp_configuration={
+                "nlp_engine_name": "spacy",
+                "models": [{"lang_code": "en", "model_name": SPACY_MODEL}],
+            }
+        ).create_engine()
+        self.analyzer = AnalyzerEngine(nlp_engine=nlp_engine)
         self.anonymizer = AnonymizerEngine()
 
         self.entities = [
