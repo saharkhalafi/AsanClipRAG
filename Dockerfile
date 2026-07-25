@@ -29,7 +29,8 @@ RUN python -m pip install --upgrade pip && \
         --no-cache-dir \
         --timeout=120 \
         --retries=10 \
-        -r requirements.txt
+        -r requirements.txt && \
+    python -m spacy download en_core_web_lg
 
 
 

@@ -1,0 +1,4 @@
+﻿╪¬╪¿╪▒█î┌⌐ ╪▒┘ê╪▓ ┘à╪º╪»╪▒ ┌å█î ╪»╪º╪▒█î╪ƒ -> True None 1.104 occasions
+╪▒┘ê╪▓ ┘à╪º╪»╪▒ ┌⌐┘ä█î┘╛ ╪«┘ê╪¿ ┌å█î ╪»╪º╪▒█î╪ƒ -> True None 1.104 occasions
+╪¬┘ê ┌å╪▒╪º ╪º█î┘å┘é╪»╪▒ ╪¿╪»█î╪ƒ -> False chat_like_query_blocked 0.0 None
+┘ç┘ê╪º ╪º┘à╪▒┘ê╪▓ ┌å╪╖┘ê╪▒┘ç╪ƒ -> False low_semantic_confidence 0.0 None
