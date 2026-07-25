@@ -18,6 +18,7 @@ services:
       SEED_DATABASE: ${SEED_DATABASE:-false}
       SALE1404_SQL_PATH: /app/Sale1404.sql
       MIN_PRODUCTS_FOR_IMPORT: ${MIN_PRODUCTS_FOR_IMPORT:-100}
+      ENABLE_PII_DETECTION: ${ENABLE_PII_DETECTION:-true}
     volumes:
       - .:/app
       - ./migrations:/app/migrations

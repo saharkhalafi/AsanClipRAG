@@ -45,38 +45,61 @@ def _similarity(a: str, b: str) -> float:
 
 
 # =========================================================
-# NEW: RETRIEVAL SHAPE FILTER
+# QUERY NOISE / CHAT HELPERS
 # =========================================================
 
-def _is_retrieval_like(q: str) -> bool:
-    """
-    Very lightweight gate to block conversational / chat-like queries.
-    Not an intent classifier.
-    """
-    q = _normalize(q)
+# Conversational filler — stripped before catalog matching, NOT chat signals.
+FILLER_TOKENS = frozenset({
+    "چی", "چیه", "چیز", "چیزی", "داری", "دارید", "دارم", "دارین",
+    "میخوام", "میخواهم", "میخوای", "میخوایم", "میخواهیم",
+    "برای", "یه", "یک", "خوب", "بهترین", "لطفا", "لطفاً",
+    "بده", "بفرست", "بفرستم", "بساز", "بسازم", "کن", "کنید",
+    "کدوم", "چطور", "چجوری", "چگونه", "میشه", "میتونم", "میتونی",
+    "خیلی", "خفن", "ساده", "شیک", "لطف", "لطفا", "لطفاً",
+    "چند", "چقد", "چقدر", "هم", "رو", "را", "به", "از", "تو", "من",
+    "ما", "شما", "اون", "اونا", "این", "اون", "که", "با", "و",
+})
 
-    if len(q) < 4:
-        return False
+# Hostile / meta-chat directed at the bot — only block when catalog has no signal.
+HOSTILE_CHAT_TOKENS = frozenset({
+    "چرا", "مگه", "اصلا", "فکر", "فکرمی", "نظرت", "مشکلت", "حالت",
+    "میگی", "میفهمی", "نمیفهمی", "احمق", "مسخره", "خراب", "اشتباه",
+    "افتضاح", "فاجعه", "usable", "hallucinate", "contradictory",
+    "نیستی", "بدی", "بد", "کیفیت", "overthink", "trust", "consistency",
+    "production", "pipeline", "failure", "offtopic", "off-topic",
+})
 
-    tokens = set(_tokens(q))
 
-    chat_markers = {
-        "چیه", "چرا", "مگه", "اصلا", "فکر", "فکرمی", "به", "نظرت",
-        "مشکلت", "حالت", "حس", "با", "من", "میگی", "میفهمی",
-        "تبریک", "حرف", "گفتی", "چی", "داری"
-    }
+def _content_tokens(text: str) -> List[str]:
+    return [t for t in _tokens(text) if t not in FILLER_TOKENS]
 
-    # strong conversational signal
-    if len(tokens & chat_markers) >= 2:
-        return False
 
-    # pronoun-heavy + question-like structure
-    question_markers = ["؟", "چرا", "چطوری", "چجوری"]
-    if any(m in q for m in question_markers) and len(tokens) < 10:
-        if len(tokens & chat_markers) >= 1:
-            return False
+def _is_hostile_chat(query: str) -> bool:
+    """True when the user is complaining to / about the bot, not searching."""
+    tokens = set(_tokens(query))
+    hostile_hits = tokens & HOSTILE_CHAT_TOKENS
 
-    return True
+    if len(hostile_hits) >= 3:
+        return True
+
+    # "تو" + complaint language is almost always meta-chat
+    if "تو" in tokens and len(hostile_hits) >= 1:
+        return True
+
+    complaint_pairs = (
+        ("چرا", "نمیفهمی"),
+        ("چرا", "بد"),
+        ("اصلا", "نمیفهمی"),
+        ("اصلا", "بلد"),
+        ("چرا", "کار"),
+        ("چرا", "اشتباه"),
+    )
+    q = _normalize(query)
+    for a, b in complaint_pairs:
+        if a in q and b in q:
+            return True
+
+    return False
 
 
 # =========================================================
@@ -116,17 +139,8 @@ class SemanticIntentDetector:
     # =====================================================
     def detect(self, query: str) -> Dict[str, Any]:
         q = _normalize(query)
-
-        if not _is_retrieval_like(q):
-            return {
-                "ok": False,
-                "best_score": 0.0,
-                "matches": {},
-                "fallback_to_name": True,
-                "reason": "chat_like_query_blocked"
-            }
-
         q_tokens = set(_tokens(q))
+        content_tokens = set(_content_tokens(q)) or q_tokens
 
         matches: Dict[str, Any] = {}
         best_field = None
@@ -140,7 +154,7 @@ class SemanticIntentDetector:
             field_best_score = 0.0
 
             for value in values:
-                score = self._score(q, q_tokens, value) * weight
+                score = self._score(q, content_tokens, value) * weight
                 if score > field_best_score:
                     field_best_score = score
                     field_best_value = value
@@ -162,7 +176,7 @@ class SemanticIntentDetector:
             best_name = None
 
             for name in self.catalog[self.fallback_label_field]:
-                score = self._score(q, q_tokens, name)
+                score = self._score(q, content_tokens, name)
                 if score > best_name_score:
                     best_name_score = score
                     best_name = name
@@ -176,8 +190,15 @@ class SemanticIntentDetector:
                 best_score = best_name_score
                 fallback = False
 
-        # FINAL HARD CUT
         if best_score < 0.45:
+            if _is_hostile_chat(query):
+                return {
+                    "ok": False,
+                    "best_score": round(float(best_score), 4),
+                    "matches": {},
+                    "fallback_to_name": True,
+                    "reason": "chat_like_query_blocked"
+                }
             return {
                 "ok": False,
                 "best_score": round(float(best_score), 4),
@@ -206,6 +227,13 @@ class SemanticIntentDetector:
 
         if query == candidate:
             return 1.0
+
+        # Multi-word catalog value fully present in query (e.g. "روز مادر")
+        if len(cand_tokens) >= 2 and cand_tokens.issubset(q_tokens):
+            return 0.92
+
+        if candidate in query:
+            return 0.88
 
         overlap = 0.0
         if q_tokens and cand_tokens:
