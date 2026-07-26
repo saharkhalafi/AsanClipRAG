@@ -1,15 +1,10 @@
 # app2/retrieval/retrieval_orchestrator.py
 
-from typing import Dict, Any, List, Optional
 import time
-import numpy as np
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any
 
-from app2.retrieval.vector_search import VectorSearchService
-from app2.retrieval.bm25_search import BM25SearchService
-from app2.retrieval.metadata_search import MetadataSearchService
-from app2.services.retrieval_quality import RetrievalQualityModel
-from app2.routing.query_router import QueryRouter
+import numpy as np
 
 
 class RetrievalOrchestrator:
@@ -26,7 +21,7 @@ class RetrievalOrchestrator:
         router,
         max_retries: int = 2,
         quality_threshold: float = 0.55,
-        mode_timeouts: Optional[Dict[str, float]] = None,
+        mode_timeouts: dict[str, float] | None = None,
     ):
         self.vector_search = vector_search
         self.bm25_search = bm25_search
@@ -44,7 +39,7 @@ class RetrievalOrchestrator:
     # -------------------------------------------------
     # MODE HELPERS
     # -------------------------------------------------
-    def _next_mode(self, current_mode: str, router_mode: Optional[str] = None) -> str:
+    def _next_mode(self, current_mode: str, router_mode: str | None = None) -> str:
         current_mode = (current_mode or "vector").lower()
         router_mode = (router_mode or "").lower()
         if current_mode == "vector":
@@ -58,7 +53,7 @@ class RetrievalOrchestrator:
     def _mode_budget(self, mode: str) -> float:
         return float(self.mode_timeouts.get((mode or "vector").lower(), 2.0))
 
-    def _normalize_vector_result(self, row: Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_vector_result(self, row: dict[str, Any]) -> dict[str, Any]:
         item = dict(row)
         distance = float(item.get("distance", 1.0))
         vector_score = max(0.0, 1.0 - distance)
@@ -68,7 +63,7 @@ class RetrievalOrchestrator:
         item["source"] = item.get("source", "vector")
         return item
 
-    def _normalize_bm25_result(self, row: Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_bm25_result(self, row: dict[str, Any]) -> dict[str, Any]:
         item = dict(row)
         item["vector_score"] = float(item.get("vector_score", 0.0))
         item["bm25_score"] = float(item.get("bm25_score", 0.0))
@@ -78,10 +73,10 @@ class RetrievalOrchestrator:
 
     def _merge_vector_bm25(
         self,
-        vector_results: List[Dict[str, Any]],
-        bm25_results: List[Dict[str, Any]],
+        vector_results: list[dict[str, Any]],
+        bm25_results: list[dict[str, Any]],
         bm25_rescue_limit: int = 5,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Safe hybrid merge"""
         if not vector_results and not bm25_results:
             return []
@@ -92,7 +87,7 @@ class RetrievalOrchestrator:
         bm25_map = {r["id"]: r for r in normalized_bm25 if r.get("id") is not None}
         max_bm25 = max((r.get("bm25_score", 0.0) for r in normalized_bm25), default=0.0) or 1.0
 
-        merged: List[Dict[str, Any]] = []
+        merged: list[dict[str, Any]] = []
         seen_ids = set()
 
         # Primary vector + BM25 overlap boost
@@ -134,9 +129,9 @@ class RetrievalOrchestrator:
         self,
         query: str,
         query_vector: np.ndarray,
-        filters: Dict[str, Any],
-        candidate_ids: Optional[List[int]],
-    ) -> Dict[str, Any]:
+        filters: dict[str, Any],
+        candidate_ids: list[int] | None,
+    ) -> dict[str, Any]:
         """Run vector + BM25 in parallel"""
         with ThreadPoolExecutor(max_workers=2) as executor:
             future_vector = executor.submit(
@@ -168,15 +163,15 @@ class RetrievalOrchestrator:
         self,
         query: str,
         query_vector: np.ndarray,
-        filters: Dict[str, Any],
-        semantic: Dict[str, Any],
-        candidate_ids: Optional[List[int]] = None,
-    ) -> Dict[str, Any]:
+        filters: dict[str, Any],
+        semantic: dict[str, Any],
+        candidate_ids: list[int] | None = None,
+    ) -> dict[str, Any]:
         started_at = time.monotonic()
-        attempt_history: List[Dict[str, Any]] = []
+        attempt_history: list[dict[str, Any]] = []
         current_mode = "vector"
-        best_bundle: Optional[Dict[str, Any]] = None
-        last_quality: Dict[str, Any] = {}
+        best_bundle: dict[str, Any] | None = None
+        last_quality: dict[str, Any] = {}
         last_route = None
 
         for attempt_idx in range(self.max_retries + 1):

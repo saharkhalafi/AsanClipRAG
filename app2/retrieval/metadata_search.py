@@ -1,5 +1,5 @@
-from typing import Any, Dict, List, Optional
 import re
+from typing import Any
 
 from sqlalchemy import text
 
@@ -13,7 +13,7 @@ class MetadataSearchService:
     # TOKEN EXTRACTION
     # =====================================================
 
-    def _extract_tokens(self, query: str) -> List[str]:
+    def _extract_tokens(self, query: str) -> list[str]:
         """
         Generic tokenization:
         - no hardcoded keywords
@@ -52,11 +52,11 @@ class MetadataSearchService:
 
     def search(
         self,
-        filters: Dict[str, Any],
+        filters: dict[str, Any],
         query: str,
-        semantic: Optional[Dict[str, Any]] = None,
+        semantic: dict[str, Any] | None = None,
         limit: int = 500,
-    ) -> List[int]:
+    ) -> list[int]:
 
         semantic = semantic or {}
         semantic_matches = semantic.get("matches", {}) or {}
@@ -68,12 +68,12 @@ class MetadataSearchService:
         if not tokens and not semantic_matches:
             return self._fallback_name_search(query=query, limit=limit)
 
-        params: Dict[str, Any] = {
+        params: dict[str, Any] = {
             "limit": limit
         }
 
-        score_terms: List[str] = []
-        where_terms: List[str] = []
+        score_terms: list[str] = []
+        where_terms: list[str] = []
 
         # =====================================================
         # 1. QUERY TOKEN SCORING
@@ -230,18 +230,18 @@ class MetadataSearchService:
     # NAME/RAG FALLBACK
     # =====================================================
 
-    def _fallback_name_search(self, query: str, limit: int) -> List[int]:
+    def _fallback_name_search(self, query: str, limit: int) -> list[int]:
         tokens = self._extract_tokens(query)
 
         if not tokens:
             return []
 
-        params: Dict[str, Any] = {
+        params: dict[str, Any] = {
             "limit": limit
         }
 
-        score_terms: List[str] = []
-        where_terms: List[str] = []
+        score_terms: list[str] = []
+        where_terms: list[str] = []
 
         for i, token in enumerate(tokens[:8]):
             key = f"tok_{i}"

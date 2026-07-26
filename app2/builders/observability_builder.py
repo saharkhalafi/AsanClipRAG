@@ -1,22 +1,23 @@
 # app2/builders/observability_builder.py
-from typing import Dict, Any, List, Optional
 import uuid
+from typing import Any
+
 
 class ObservabilityBuilder:
     @staticmethod
     def build(
         raw_query: str,
         query: str,
-        filters: Dict,
-        semantic: Dict,
-        quality: Dict,
-        retrieval: Dict,
-        results: List[Dict],
-        timings: Dict,
+        filters: dict,
+        semantic: dict,
+        quality: dict,
+        retrieval: dict,
+        results: list[dict],
+        timings: dict,
         latency_total_ms: float,
         final_mode: str,
-        extra: Optional[Dict] = None
-    ) -> Dict[str, Any]:
+        extra: dict | None = None
+    ) -> dict[str, Any]:
         payload = {
             "request_id": str(uuid.uuid4()),
             "query_raw": raw_query,

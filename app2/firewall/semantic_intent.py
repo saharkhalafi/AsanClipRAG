@@ -2,12 +2,11 @@
 from __future__ import annotations
 
 import re
-import numpy as np
 from difflib import SequenceMatcher
-from typing import Dict, List, Any, Optional
-from sqlalchemy import text
-from app2.exceptions import ValidationError
+from typing import Any
 
+import numpy as np
+from sqlalchemy import text
 
 # =========================================================
 # HELPERS
@@ -28,7 +27,7 @@ def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def _tokens(text: str) -> List[str]:
+def _tokens(text: str) -> list[str]:
     if not text:
         return []
     return re.findall(r"[\w\u0600-\u06FF]+", _normalize(text))
@@ -87,8 +86,8 @@ class SemanticIntentDetector:
 
     def __init__(
         self,
-        catalog: Dict[str, List[str]],
-        sparse_fields: Optional[List[str]] = None,
+        catalog: dict[str, list[str]],
+        sparse_fields: list[str] | None = None,
         fallback_label_field: str = "product_names",
         embedder=None,
         db=None
@@ -114,7 +113,7 @@ class SemanticIntentDetector:
     # =====================================================
     # MAIN DETECT
     # =====================================================
-    def detect(self, query: str) -> Dict[str, Any]:
+    def detect(self, query: str) -> dict[str, Any]:
         q = _normalize(query)
 
         if not _is_retrieval_like(q):
@@ -128,7 +127,7 @@ class SemanticIntentDetector:
 
         q_tokens = set(_tokens(q))
 
-        matches: Dict[str, Any] = {}
+        matches: dict[str, Any] = {}
         best_field = None
         best_score = 0.0
 
@@ -221,7 +220,7 @@ class SemanticIntentDetector:
     # =====================================================
     # RELEVANCE CHECK (UNCHANGED BUT CLEAN)
     # =====================================================
-    def check_relevance(self, query: str, min_final_score: float = 0.50) -> Dict[str, Any]:
+    def check_relevance(self, query: str, min_final_score: float = 0.50) -> dict[str, Any]:
         q = _normalize(query)
 
         if not q or len(q) < 4:

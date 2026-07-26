@@ -2,19 +2,18 @@
 import os
 import re
 from datetime import date
-from typing import Dict, Any, Optional
+from typing import Any
 
-from sqlalchemy.orm import Session
+from app2.db.models import FirewallDailyUsage
 from sqlalchemy.exc import SQLAlchemyError
-
-from app2.db.models import FirewallDailyUsage   
+from sqlalchemy.orm import Session
 
 
 class CostController:
     def __init__(
         self,
-        daily_limit_units: Optional[int] = None,
-        max_units_per_request: Optional[int] = None,
+        daily_limit_units: int | None = None,
+        max_units_per_request: int | None = None,
     ):
         self.daily_limit_units = int(
             daily_limit_units or os.getenv("FIREWALL_DAILY_LIMIT_UNITS", "1000")
@@ -57,7 +56,7 @@ class CostController:
             units += 1
         return min(units, self.max_units_per_request)
 
-    def check(self, db: Session, query: str) -> Dict[str, Any]:
+    def check(self, db: Session, query: str) -> dict[str, Any]:
         q = (query or "").strip()
         cost_units = self.estimate_units(q)
 
@@ -116,7 +115,7 @@ class CostController:
             db.rollback()
             return {
                 "allowed": True,
-                "reason": f"cost_controller_db_error:{str(e)}",
+                "reason": f"cost_controller_db_error:{e!s}",
                 "cost_units": cost_units,
                 "used_today": 0,
                 "daily_limit": self.daily_limit_units,
@@ -126,7 +125,7 @@ class CostController:
             db.rollback()
             return {
                 "allowed": True,
-                "reason": f"cost_controller_error_fallback:{str(e)}",
+                "reason": f"cost_controller_error_fallback:{e!s}",
                 "cost_units": cost_units,
                 "used_today": 0,
                 "daily_limit": self.daily_limit_units,

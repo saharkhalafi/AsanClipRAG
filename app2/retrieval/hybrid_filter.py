@@ -1,11 +1,11 @@
-from typing import Dict, Any
+from typing import Any
 
 
 class HybridFilterBuilder:
 
     def build_sql_filters(
         self,
-        filters: Dict[str, Any]
+        filters: dict[str, Any]
     ):
 
         where_clauses = []

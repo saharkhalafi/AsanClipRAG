@@ -1,6 +1,6 @@
 # app2/ranking/metadata_boost.py
 
-from typing import List, Dict, Any
+from typing import Any
 
 
 class MetadataBooster:
@@ -20,10 +20,10 @@ class MetadataBooster:
     # -------------------------------------------------
     def boost(
         self,
-        results: List[Dict[str, Any]],
-        filters: Dict[str, Any],
+        results: list[dict[str, Any]],
+        filters: dict[str, Any],
         query: str = ""
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
 
         boosted = []
 
@@ -46,7 +46,7 @@ class MetadataBooster:
     # -------------------------------------------------
     # base score from vector + lexical
     # -------------------------------------------------
-    def _get_base_score(self, r: Dict[str, Any]) -> float:
+    def _get_base_score(self, r: dict[str, Any]) -> float:
 
         # distance → similarity
         if r.get("distance") is not None:
@@ -65,8 +65,8 @@ class MetadataBooster:
     # -------------------------------------------------
     def _compute_bonus(
         self,
-        r: Dict[str, Any],
-        filters: Dict[str, Any],
+        r: dict[str, Any],
+        filters: dict[str, Any],
         query: str
     ) -> float:
 

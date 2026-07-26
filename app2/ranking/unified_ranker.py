@@ -1,4 +1,5 @@
-from typing import List, Dict, Any
+from typing import Any
+
 from app2.ranking.score_normalizer import ScoreNormalizer
 
 
@@ -9,9 +10,9 @@ class UnifiedRanker:
 
     def rank(
         self,
-        results: List[Dict[str, Any]],
-        query_signals: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+        results: list[dict[str, Any]],
+        query_signals: dict[str, Any]
+    ) -> list[dict[str, Any]]:
 
         ranked = []
 

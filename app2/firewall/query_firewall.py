@@ -1,14 +1,13 @@
 # app2/firewall/query_firewall.py
-from typing import Dict, Any
 import re
-
-from app2.firewall.abuse_detector import AbuseDetector
-from app2.firewall.injection_detector import InjectionDetector
-from app2.firewall.cost_controller import CostController
-from app2.firewall.semantic_intent import SemanticIntentDetector
-from app2.firewall.query_validator import QueryValidator
+from typing import Any
 
 from app2.exceptions import ValidationError
+from app2.firewall.abuse_detector import AbuseDetector
+from app2.firewall.cost_controller import CostController
+from app2.firewall.injection_detector import InjectionDetector
+from app2.firewall.query_validator import QueryValidator
+from app2.firewall.semantic_intent import SemanticIntentDetector
 
 
 class QueryFirewall:
@@ -50,10 +49,10 @@ class QueryFirewall:
 
         return False
 
-    def check(self, query: str) -> Dict[str, Any]:
+    def check(self, query: str) -> dict[str, Any]:
         query = self._normalize(query)
 
-        signals: Dict[str, Any] = {
+        signals: dict[str, Any] = {
             "abuse": None,
             "injection": None,
             "cost": None,
@@ -81,7 +80,7 @@ class QueryFirewall:
         try:
             cost_result = self.cost.check(self.db, query)
         except Exception as e:
-            cost_result = {"allowed": True, "reason": f"cost_failed:{str(e)}", "cost_units": 0}
+            cost_result = {"allowed": True, "reason": f"cost_failed:{e!s}", "cost_units": 0}
 
         signals["cost"] = cost_result
         if not cost_result.get("allowed", True):

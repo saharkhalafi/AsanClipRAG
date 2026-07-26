@@ -1,21 +1,22 @@
 # app2/builders/response_builder.py
-from typing import Dict, Any, List
+from typing import Any
+
 
 class ResponseBuilder:
     @staticmethod
     def build(
         query: str,
-        filters: Dict,
-        semantic: Dict,
-        quality: Dict,
-        retrieval: Dict,
-        results: List[Dict],
-        timings: Dict,
+        filters: dict,
+        semantic: dict,
+        quality: dict,
+        retrieval: dict,
+        results: list[dict],
+        timings: dict,
         latency_total_ms: float,
-        final_mode: str,               
-        observability: Dict
-    ) -> Dict[str, Any]:
-        
+        final_mode: str,
+        observability: dict
+    ) -> dict[str, Any]:
+
         return {
             "mode": final_mode,
             "query": query,

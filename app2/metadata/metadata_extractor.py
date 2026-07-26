@@ -1,14 +1,14 @@
-from typing import List, Dict, Any
 import re
+from typing import Any
 
 
 class MetadataExtractor:
 
     def __init__(
         self,
-        product_types: List[str],
-        occasions: List[str],
-        platforms: List[str],
+        product_types: list[str],
+        occasions: list[str],
+        platforms: list[str],
     ):
         self.product_types = product_types
         self.occasions = occasions
@@ -74,8 +74,8 @@ class MetadataExtractor:
     def _find_matches(
         self,
         query: str,
-        values: List[str]
-    ) -> List[str]:
+        values: list[str]
+    ) -> list[str]:
 
         q = self._normalize(query)
 
@@ -102,11 +102,11 @@ class MetadataExtractor:
     # MAIN EXTRACTION
     # --------------------------------------------------
 
-    def extract(self, query: str) -> Dict[str, Any]:
+    def extract(self, query: str) -> dict[str, Any]:
 
         q = self._normalize(query)
 
-        filters: Dict[str, Any] = {}
+        filters: dict[str, Any] = {}
 
         product_types = self._find_matches(q, self.product_types)
         occasions = self._find_matches(q, self.occasions)

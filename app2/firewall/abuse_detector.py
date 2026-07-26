@@ -1,7 +1,7 @@
 # app2/firewall/abuse_detector.py
 import re
 import unicodedata
-from typing import Dict, Any
+from typing import Any
 
 
 class AbuseDetector:
@@ -15,7 +15,7 @@ class AbuseDetector:
             return 0.0
         return sum(1 for c in letters if c in vowels) / len(letters)
 
-    def check(self, query: str) -> Dict[str, Any]:
+    def check(self, query: str) -> dict[str, Any]:
         q = (query or "").strip()
 
         # ─────────────────────────────

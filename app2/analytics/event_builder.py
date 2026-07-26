@@ -1,10 +1,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 
-def _extract_cost(fw_context: Dict[str, Any]) -> Dict[str, Any]:
+def _extract_cost(fw_context: dict[str, Any]) -> dict[str, Any]:
     """Pull cost sub-dict out of firewall signals."""
     cost = (fw_context.get("signals") or {}).get("cost") or {}
     return {
@@ -46,17 +46,17 @@ class SearchEventBuilder:
     @staticmethod
     def from_firewall_block(
         query_raw: str,
-        fw_context: Dict[str, Any],
+        fw_context: dict[str, Any],
         request_id: str,
         fw_latency: float,
         total_latency: float,
-        session_id: Optional[str] = None,
-        user_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        session_id: str | None = None,
+        user_id: str | None = None,
+    ) -> dict[str, Any]:
         signals = fw_context.get("signals") or {}
         reason  = fw_context.get("reason") or "blocked"
 
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             # identity
             "request_id":   request_id,
             "session_id":   session_id,
@@ -93,16 +93,16 @@ class SearchEventBuilder:
 
     @staticmethod
     def from_result(
-        result: Dict[str, Any],
-        fw_context: Dict[str, Any],
+        result: dict[str, Any],
+        fw_context: dict[str, Any],
         request_id: str,
         fw_latency: float,
         total_latency: float,
-        session_id: Optional[str] = None,
-        user_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        obs: Dict[str, Any] = result.get("observability") or {}
-        latency_breakdown: Dict[str, Any] = obs.get("latency_breakdown_ms") or {}
+        session_id: str | None = None,
+        user_id: str | None = None,
+    ) -> dict[str, Any]:
+        obs: dict[str, Any] = result.get("observability") or {}
+        latency_breakdown: dict[str, Any] = obs.get("latency_breakdown_ms") or {}
 
         # ── Cache Info ───────────────────────────────────────────────
         cache_hit = obs.get("cache_hit", False)
@@ -119,7 +119,7 @@ class SearchEventBuilder:
         attempt_history = obs.get("attempt_history") or []
         signals = fw_context.get("signals") or {}
 
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             # identity
             "request_id": request_id,
             "session_id": session_id,

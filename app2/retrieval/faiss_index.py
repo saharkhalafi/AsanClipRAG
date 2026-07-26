@@ -1,8 +1,8 @@
-import faiss
-import numpy as np
 import pickle
 from pathlib import Path
-from typing import List, Tuple
+
+import faiss
+import numpy as np
 
 
 class FaissIndex:
@@ -18,7 +18,7 @@ class FaissIndex:
     # =====================================================
     # BUILD INDEX
     # =====================================================
-    def build_index(self, embeddings: np.ndarray, product_ids: List[int]):
+    def build_index(self, embeddings: np.ndarray, product_ids: list[int]):
         """
         ساخت FAISS index
         embeddings: shape = (n, dimension)
@@ -63,7 +63,7 @@ class FaissIndex:
     # =====================================================
     # SEARCH
     # =====================================================
-    def search(self, query_vector: np.ndarray, k: int = 50) -> List[Tuple[int, float]]:
+    def search(self, query_vector: np.ndarray, k: int = 50) -> list[tuple[int, float]]:
         """
         جستجوی nearest neighbors
         return: List[(product_id, similarity)]
@@ -87,7 +87,7 @@ class FaissIndex:
 
         distances, indices = self.index.search(query_vector, k)
 
-        results: List[Tuple[int, float]] = []
+        results: list[tuple[int, float]] = []
 
         for idx, dist in zip(indices[0], distances[0]):
             if idx == -1:

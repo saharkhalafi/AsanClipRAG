@@ -1,7 +1,7 @@
-from typing import List, Dict, Any, Optional
-from sqlalchemy import text
+from typing import Any
 
 from app2.retrieval.hybrid_filter import HybridFilterBuilder
+from sqlalchemy import text
 
 
 class BM25SearchService:
@@ -22,16 +22,16 @@ class BM25SearchService:
         self,
         query: str,
         limit: int = 50,
-        filters: Optional[Dict[str, Any]] = None,
-        candidate_ids: Optional[List[int]] = None,
-    ) -> List[Dict[str, Any]]:
+        filters: dict[str, Any] | None = None,
+        candidate_ids: list[int] | None = None,
+    ) -> list[dict[str, Any]]:
 
         filters = filters or {}
 
         # shared SQL filters
         where_clause, filter_params = self.filter_builder.build_sql_filters(filters)
 
-        params: Dict[str, Any] = {
+        params: dict[str, Any] = {
             "query": query,
             "limit": limit,
         }
@@ -84,7 +84,7 @@ class BM25SearchService:
 
         rows = self.db.execute(sql, params).fetchall()
 
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
         for r in rows:
             results.append({
                 "id": r._mapping["id"],

@@ -1,10 +1,11 @@
 # app2/retrieval/vector_search.py
-from sqlalchemy import text
-from typing import List, Dict, Any, Optional
-import numpy as np
+from typing import Any
 
+import numpy as np
+from app2.exceptions import DatabaseError, ValidationError  # ← جدید
 from app2.retrieval.faiss_index import FaissIndex
-from app2.exceptions import DatabaseError, ValidationError   # ← جدید
+from sqlalchemy import text
+
 
 class VectorSearchService:
 
@@ -18,13 +19,13 @@ class VectorSearchService:
     # =====================================================
     def search(
         self,
-        query_vector: Optional[np.ndarray],
+        query_vector: np.ndarray | None,
         limit: int = 150,
         where_clause: str = "",
-        params: Optional[Dict[str, Any]] = None,
-        candidate_ids: Optional[List[int]] = None,
+        params: dict[str, Any] | None = None,
+        candidate_ids: list[int] | None = None,
         mode: str = "vector",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
 
         if query_vector is None:
             return []
@@ -45,7 +46,7 @@ class VectorSearchService:
                 if candidate_ids:
                     results = [r for r in results if r[0] in candidate_ids]
                 return self._format_results(results, mode)
-            except Exception as e:
+            except Exception:
                 # fallback به PGVector
                 pass
 
@@ -117,7 +118,7 @@ class VectorSearchService:
 
         return results
 
-    def _format_results(self, faiss_results: List[tuple], mode: str) -> List[Dict]:
+    def _format_results(self, faiss_results: list[tuple], mode: str) -> list[dict]:
         if not faiss_results:
             return []
 

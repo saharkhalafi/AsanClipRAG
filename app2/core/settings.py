@@ -1,8 +1,8 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Literal
 from functools import lru_cache
+from typing import Literal
 
 from app2.config.logging import setup_logging
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -29,6 +29,6 @@ class Settings(BaseSettings):
         setup_logging(self.LOG_LEVEL)
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     return Settings()

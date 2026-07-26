@@ -8,25 +8,23 @@ from __future__ import annotations
 import logging
 from time import perf_counter
 from uuid import uuid4
-from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, Request
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-
-from app2.db.session import get_db
-from app2.services.search_orchestrator import SearchOrchestrator
-from app2.metadata.metadata_loader import MetadataLoader
-from app2.embedding.embedding_service import EmbeddingService
-from app2.firewall.semantic_intent import SemanticIntentDetector
-from app2.firewall.query_firewall import QueryFirewall
 from app2.analytics.event_builder import SearchEventBuilder
 from app2.analytics.logger import ObservabilityLogger
+from app2.db.session import get_db
+from app2.embedding.embedding_service import EmbeddingService
 
 # Exception Handling
 from app2.exceptions import ValidationError
+from app2.firewall.query_firewall import QueryFirewall
+from app2.firewall.semantic_intent import SemanticIntentDetector
+from app2.metadata.metadata_loader import MetadataLoader
+from app2.services.search_orchestrator import SearchOrchestrator
+from fastapi import APIRouter, Depends, Header, Request
+from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 api_logger = logging.getLogger("app2.api")
@@ -84,8 +82,8 @@ async def search(
     req: SearchRequest,
     request: Request,
     db: Session = Depends(get_db),
-    x_session_id: Optional[str] = Header(default=None, alias="X-Session-Id"),
-    x_user_id: Optional[str] = Header(default=None, alias="X-User-Id"),
+    x_session_id: str | None = Header(default=None, alias="X-Session-Id"),
+    x_user_id: str | None = Header(default=None, alias="X-User-Id"),
 ):
     request_id = uuid4().hex
     query      = req.query
@@ -174,6 +172,6 @@ async def search(
             "results": [],
         }
 
-    except Exception as e:
+    except Exception:
         #manage unexpected errors golbally
         raise

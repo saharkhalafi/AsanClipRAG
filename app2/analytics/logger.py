@@ -5,7 +5,7 @@ import hashlib
 import logging
 import math
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 from uuid import UUID
 
 import numpy as np
@@ -47,7 +47,7 @@ class ObservabilityLogger:
 
     # ── Derived field defaults ─────────────────────────────────────────────────
 
-    def _fill_defaults(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def _fill_defaults(self, data: dict[str, Any]) -> dict[str, Any]:
         query_text = str(
             data.get("query_normalized") or data.get("query_raw") or ""
         ).strip()
@@ -92,7 +92,7 @@ class ObservabilityLogger:
 
     # ── Public API ─────────────────────────────────────────────────────────────
 
-    def log_search_event(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def log_search_event(self, payload: dict[str, Any]) -> dict[str, Any]:
         data = self._jsonable(payload)
         data = self._fill_defaults(data)
 

@@ -1,6 +1,6 @@
 # app2/firewall/query_validator.py
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 
 
 @dataclass

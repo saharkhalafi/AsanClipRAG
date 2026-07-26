@@ -1,12 +1,19 @@
-from datetime import datetime, date
+from app2.db.base import Base
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
-    Column, Integer, String, Float, Boolean, BigInteger,
-    DateTime, Text, Index, Date, func
+    BigInteger,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    Index,
+    Integer,
+    String,
+    Text,
+    func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from pgvector.sqlalchemy import Vector
-
-from app2.db.base import Base
 
 
 # =====================================================
@@ -153,9 +160,9 @@ class AsanClipProduct(Base):
     occasion = Column(Text, nullable=True)
     platform = Column(Text, nullable=True)
 
-    embedding_vector = Column(Vector(3072), nullable=True)  
+    embedding_vector = Column(Vector(3072), nullable=True)
 
-    tag_status = Column(Text, default="done")   
+    tag_status = Column(Text, default="done")
     url = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

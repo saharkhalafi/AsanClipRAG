@@ -1,6 +1,6 @@
 # app2/scripts/run_mixed_test_queries.py
-import sys
 import os
+import sys
 import time
 import uuid
 
@@ -15,8 +15,8 @@ if project_root not in sys.path:
 # ======================
 # Imports
 # ======================
+from app2.main import app  # حالا درست کار می‌کند
 from fastapi.testclient import TestClient
-from app2.main import app   # حالا درست کار می‌کند
 
 test_client = TestClient(app)
 
