@@ -1,4 +1,5 @@
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 from app2.ranking.score_normalizer import ScoreNormalizer
 
 

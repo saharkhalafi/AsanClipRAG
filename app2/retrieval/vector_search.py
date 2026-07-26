@@ -1,10 +1,11 @@
 # app2/retrieval/vector_search.py
-from sqlalchemy import text
-from typing import List, Dict, Any, Optional
-import numpy as np
+from typing import Any, Dict, List, Optional
 
+import numpy as np
+from app2.exceptions import DatabaseError, ValidationError  # ← جدید
 from app2.retrieval.faiss_index import FaissIndex
-from app2.exceptions import DatabaseError, ValidationError   # ← جدید
+from sqlalchemy import text
+
 
 class VectorSearchService:
 
@@ -45,7 +46,7 @@ class VectorSearchService:
                 if candidate_ids:
                     results = [r for r in results if r[0] in candidate_ids]
                 return self._format_results(results, mode)
-            except Exception as e:
+            except Exception:
                 # fallback به PGVector
                 pass
 

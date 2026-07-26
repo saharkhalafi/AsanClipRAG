@@ -1,6 +1,6 @@
 # app2/ranking/metadata_boost.py
 
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 
 class MetadataBooster:

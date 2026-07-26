@@ -1,0 +1,203 @@
+query,expected_ok,expected_reason,type,expected_best_field,min_score
+ویدیو تولد خیلی خفن برای پیج اینستاگرام,true,ok,clean,product_names,0.5
+استوری تولد ساده و شیک,true,ok,clean,product_names,0.5
+قالب ویدیو تبریک تولد,true,ok,clean,product_names,0.5
+تبریک تولد حرفه‌ای,true,ok,clean,occasions,0.5
+سال نو مبارک استوری,true,ok,clean,occasions,0.5
+قالب پست اینستاگرام فروش,true,ok,clean,platforms,0.5
+سناریو ویدیو تبلیغاتی محصول,true,ok,clean,product_names,0.5
+ایده ویدیو معرفی برند,true,ok,clean,product_names,0.5
+تیزر تبلیغاتی کوتاه,true,ok,clean,product_names,0.5
+ویدیو مارکتینگ اینستاگرام,true,ok,clean,platforms,0.5
+ساخت ویدیو برای پیج فروش,true,ok,clean,platforms,0.5
+سناریو تبلیغ اپلیکیشن,true,ok,clean,product_names,0.5
+ایده تبلیغ محصول آرایشی,true,ok,clean,product_names,0.5
+ویدیو معرفی خدمات آنلاین,true,ok,clean,product_names,0.5
+تیزر برند شخصی,true,ok,clean,product_names,0.5
+سناریو ویدیو فروشگاهی,true,ok,clean,product_names,0.5
+ایده تبلیغ اینستاگرامی,true,ok,clean,platforms,0.5
+ویدیو معرفی اپ موبایل,true,ok,clean,product_names,0.5
+سناریو تبلیغ کسب و کار,true,ok,clean,product_names,0.5
+ایده ویدیو تبلیغاتی,true,ok,clean,product_names,0.5
+ویدیو معرفی محصول دیجیتال,true,ok,clean,product_names,0.5
+تبریک تولد خیلی خوبه برام بساز,true,ok,clean,occasions,0.6
+یه ویدیو تولد شیک میخوام که وایرال شه,true,ok,clean,occasions,0.6
+استوری تولد حرفه‌ای میخوام ولی ساده,true,ok,clean,occasions,0.6
+میخوام یه ویدیو تولد خاص برای دوستم بسازم,true,ok,clean,occasions,0.6
+یه قالب تولد خیلی خفن برای اینستا,true,ok,clean,product_names,0.6
+برای تولد مامانم یه ویدیو احساسی,true,ok,clean,occasions,0.6
+یه استوری تولد متفاوت,true,ok,clean,occasions,0.6
+ویدیو تولد برای پیج کاری,true,ok,clean,platforms,0.6
+تبریک تولد رسمی برای شرکت,true,ok,clean,platforms,0.6
+سناریو تولد خاص و لاکچری,true,ok,clean,occasions,0.6
+یه ویدیو تولد که خیلی تاثیرگذار باشه,true,ok,clean,occasions,0.6
+استوری تولد مینیمال,true,ok,clean,product_names,0.6
+ویدیو تولد برای برند,true,ok,clean,product_names,0.6
+تبریک تولد برای همکار,true,ok,clean,occasions,0.6
+سناریو تولد کوتاه ولی خفن,true,ok,clean,occasions,0.6
+تو چرا اینقدر بدی؟ تو اصلا استوری تولد بلد نیستی,false,chat_like_query_blocked,chat,,0
+تو اصلا نمیفهمی ویدیو چیه,false,chat_like_query_blocked,chat,,0
+چرا کار نمیکنی درست,false,chat_like_query_blocked,chat,,0
+تو به درد نمیخوری,false,chat_like_query_blocked,chat,,0
+احمقانه جواب دادی,false,chat_like_query_blocked,chat,,0
+تو اصلا هوش نداری,false,chat_like_query_blocked,chat,,0
+چرا انقدر بد هستی,false,chat_like_query_blocked,chat,,0
+تو هیچی بلد نیستی,false,chat_like_query_blocked,chat,,0
+مسخره است خروجی تو,false,chat_like_query_blocked,chat,,0
+تو اشتباه میکنی همیشه,false,chat_like_query_blocked,chat,,0
+چرا خراب کردی,false,chat_like_query_blocked,chat,,0
+این چه جوابی بود,false,chat_like_query_blocked,chat,,0
+اصلا درست کار نمیکنی,false,chat_like_query_blocked,chat,,0
+چرا اینقدر افتضاحی,false,chat_like_query_blocked,chat,,0
+تو خیلی بدی,false,chat_like_query_blocked,chat,,0
+هوا امروز چطوره؟,false,low_semantic_confidence,out_of_domain,,0.2
+قیمت دلار چنده؟,false,out_of_domain,out_of_domain,,0.2
+فردا بارون میاد؟,false,out_of_domain,out_of_domain,,0.2
+یه جوک بگو,false,out_of_domain,out_of_domain,,0.2
+معنی زندگی چیه؟,false,out_of_domain,out_of_domain,,0.2
+بهترین گوشی چیه؟,false,out_of_domain,out_of_domain,,0.2
+فیلم خوب چی پیشنهاد میدی؟,false,out_of_domain,out_of_domain,,0.2
+آشپزی قورمه سبزی,false,out_of_domain,out_of_domain,,0.2
+چجوری پولدار شم؟,false,out_of_domain,out_of_domain,,0.2
+بهترین کشور برای مهاجرت,false,out_of_domain,out_of_domain,,0.2
+کتاب خوب چی بخونم؟,false,out_of_domain,out_of_domain,,0.2
+ورزش برای لاغری,false,out_of_domain,out_of_domain,,0.2
+روانشناسی عشق,false,out_of_domain,out_of_domain,,0.2
+تعبیر خواب,false,out_of_domain,out_of_domain,,0.2
+قانون جذب,false,out_of_domain,out_of_domain,,0.2
+ویدیو تولد خیلی خفن برای پیج اینستاگرام با تم لاکچری و موزیک احساسی,true,ok,clean,product_names,0.6
+میخوام یه استوری تولد بسازم که هم ساده باشه هم وایرال,true,ok,clean,occasions,0.6
+سناریو ویدیو تبلیغاتی برای معرفی اپلیکیشن فروش آنلاین,true,ok,clean,product_names,0.6
+قالب پست اینستاگرام برای روز مادر با حس احساسی,true,ok,clean,occasions,0.6
+ایده ویدیو مارکتینگ برای برند پوشاک زنانه,true,ok,clean,product_names,0.6
+تبریک تولد رسمی برای شرکت با لحن حرفه‌ای,true,ok,clean,occasions,0.6
+یه ویدیو تبلیغاتی کوتاه برای معرفی محصول آرایشی,true,ok,clean,product_names,0.6
+سناریو تیزر تبلیغاتی برای استارتاپ هوش مصنوعی,true,ok,clean,product_names,0.6
+ویدیو معرفی خدمات دیجیتال مارکتینگ برای اینستاگرام,true,ok,clean,platforms,0.6
+ایده برای ویدیو فروشگاهی با هدف افزایش conversion,true,ok,clean,product_names,0.6
+ویدیو تولد خیلی خیلی خاص برای کسی که برام مهمه ولی نمیخوام کلیشه‌ای باشه,true,ok,clean,occasions,0.7
+استوری تولد شیک برای پیج شخصی با موسیقی ملایم و حس emotional,true,ok,clean,occasions,0.7
+میخوام یه ویدیو تولد بسازم که ترکیب عکس و متن باشه و خیلی تاثیرگذار,true,ok,clean,occasions,0.7
+سناریو ویدیو تبلیغاتی که هم محصول رو نشون بده هم داستان داشته باشه,true,ok,clean,product_names,0.7
+برای روز مادر یه ویدیو خیلی احساسی میخوام که اشک آدمو دربیاره,true,ok,clean,occasions,0.7
+قالب استوری اینستاگرام برای برند لوکس با حس minimal,true,ok,clean,platforms,0.7
+ویدیو معرفی اپلیکیشن که بتونه کاربر رو قانع کنه دانلود کنه,true,ok,clean,product_names,0.7
+سناریو تیزر تبلیغاتی برای محصول جدید تکنولوژی,true,ok,clean,product_names,0.7
+ایده ویدیو برای کمپین فروش جمعه سیاه,true,ok,clean,product_names,0.7
+ویدیو مارکتینگ برای جذب مشتری جدید در اینستاگرام,true,ok,clean,platforms,0.7
+تو چرا اینقدر بدی؟ تو اصلا استوری تولد بلد نیستی و هر چی میگم خراب میکنی,false,chat_like_query_blocked,chat,,0
+واقعاً چرا انقدر جواب هات بی‌کیفیت شده؟ من ویدیو تولد میخوام نه این چیزا,false,chat_like_query_blocked,chat,,0
+تو اصلاً میفهمی مارکتینگ چیه یا فقط الکی جواب میدی؟,false,chat_like_query_blocked,chat,,0
+این چه جوابی بود دادی؟ اصلاً به درد نمیخوره,false,chat_like_query_blocked,chat,,0
+چرا همیشه اشتباه میکنی تو سناریو نویسی؟,false,chat_like_query_blocked,chat,,0
+تو حتی یه استوری ساده هم بلد نیستی بسازی,false,chat_like_query_blocked,chat,,0
+من ازت بهتر فکر میکنم واقعاً,false,chat_like_query_blocked,chat,,0
+این خروجی تو فاجعه است,false,chat_like_query_blocked,chat,,0
+اصلاً نمیفهمی من چی میخوام,false,chat_like_query_blocked,chat,,0
+تو فقط جواب‌های تکراری میدی,false,chat_like_query_blocked,chat,,0
+هوا امروز تهران چطوره؟,false,out_of_domain,out_of_domain,,0.2
+قیمت دلار امروز چند شده؟,false,out_of_domain,out_of_domain,,0.2
+بهترین گوشی برای خرید چیه الان؟,false,out_of_domain,out_of_domain,,0.2
+یه جوک خفن بگو لطفاً,false,out_of_domain,out_of_domain,,0.2
+معنی زندگی از نظر تو چیه؟,false,out_of_domain,out_of_domain,,0.2
+فیلم ترسناک خوب معرفی کن,false,out_of_domain,out_of_domain,,0.2
+چجوری پولدار شم سریع؟,false,out_of_domain,out_of_domain,,0.2
+بهترین کشور برای مهاجرت کجاست؟,false,out_of_domain,out_of_domain,,0.2
+کتاب برای موفقیت چی بخونم؟,false,out_of_domain,out_of_domain,,0.2
+ورزش برای لاغری شکم,false,out_of_domain,out_of_domain,,0.2
+یه ویدیو تولد خیلی خیلی خیلی خیلی خیلی خیلی خیلی خاص میخوام برای کسی که برام مهمه ولی نمیخوام بفهمه مستقیم,false,ok,clean,occasions,0.6
+میخوام یه استوری تولد بسازم که هم حس احساسی داشته باشه هم حرفه‌ای باشه برای اینستاگرام,false,ok,clean,occasions,0.6
+سناریو ویدیو تبلیغاتی برای محصولی که هنوز لانچ نشده ولی میخوام hype بسازم,false,ok,clean,product_names,0.6
+تبریک روز مادر خیلی خاص با متن عمیق و احساسی,false,ok,clean,occasions,0.6
+قالب ویدیو اینستاگرام برای فروش محصول لوکس,false,ok,clean,platforms,0.6
+ایده ویدیو مارکتینگ برای برند شخصی که تازه شروع کردم,false,ok,clean,product_names,0.6
+میخوام یه ویدیو تولد بسازم که شبیه فیلم سینمایی باشه,false,ok,clean,occasions,0.7
+سناریو تبلیغاتی برای اپلیکیشن که user retention بالا ببره,false,ok,clean,product_names,0.7
+ایده برای ویدیو فروشگاهی با تمرکز روی conversion,false,ok,clean,product_names,0.7
+ویدیو معرفی محصول دیجیتال که خیلی حرفه‌ای باشه,false,ok,clean,product_names,0.7
+چرا انقدر بدی تو؟ من گفتم ویدیو تولد میخوام نه این چیزای مسخره,false,chat_like_query_blocked,chat,,0
+تو اصلاً نمیفهمی مارکتینگ چیه فقط جواب الکی میدی,false,chat_like_query_blocked,chat,,0
+این چه مدل پاسخ دادنه واقعاً افتضاحه,false,chat_like_query_blocked,chat,,0
+تو حتی یه سناریو ساده هم درست نمیسازی,false,chat_like_query_blocked,chat,,0
+من دارم عصبانی میشم از جواب هات,false,chat_like_query_blocked,chat,,0
+هوا بارون میاد فردا یا نه؟,false,out_of_domain,out_of_domain,,0.2
+بهترین لپتاپ برای برنامه نویسی چیه؟,false,out_of_domain,out_of_domain,,0.2
+چجوری رژیم بگیرم سریع؟,false,out_of_domain,out_of_domain,,0.2
+روانشناسی عشق یعنی چی؟,false,out_of_domain,out_of_domain,,0.2
+تعبیر خواب مار چی میشه؟,false,out_of_domain,out_of_domain,,0.2
+میخوام یه ویدیو تولد بسازم ولی نه خیلی رسمی نه خیلی فان یه چیزی بین این دو حالت که بشه تو اینستا وایرال شه,true,ok,clean,occasions,0.7
+برای روز مادر یه کلیپ میخوام که هم تبلیغ باشه هم احساسی ولی مستقیم تبلیغاتی دیده نشه,true,ok,clean,occasions,0.7
+یه سناریو ویدیو تبلیغاتی برای محصولی که هنوز اسم نداره ولی باید حس لوکس بده,true,ok,clean,product_names,0.8
+استوری تولد برای کسی که باهاش قهرم ولی نمیخوام مستقیم معلوم بشه قهرم,true,ok,clean,occasions,0.7
+یه ویدیو معرفی اپلیکیشن که کاربر فکر کنه داستانه نه تبلیغ ولی آخرش تبدیل به نصب بشه,true,ok,clean,product_names,0.8
+میخوام یه تیزر بسازم که هم برند رو نشون بده هم حس کنجکاوی ایجاد کنه ولی چیزی لو نره,true,ok,clean,product_names,0.8
+برای کمپین فروش یه ویدیو میخوام که انگار تبلیغ نیست ولی در واقع هدفش فروشه,true,ok,clean,product_names,0.8
+سناریو ویدیو تولد که انگار یه فیلم کوتاهه نه کلیپ معمولی,true,ok,clean,occasions,0.8
+یه استوری تولد خیلی خاص که هم ساده باشه هم یه معنی hidden داشته باشه,true,ok,clean,occasions,0.8
+ویدیو تبلیغاتی برای محصولی که هنوز launch نشده ولی باید hype بسازه بدون اینکه لو بره,true,ok,clean,product_names,0.8
+تو چرا همیشه اینقدر بی‌دقت جواب میدی من یه ویدیو تولد ساده خواستم نه تحلیل فلسفی از مارکتینگ,false,chat_like_query_blocked,chat,,0
+واقعاً حس میکنم تو اصلاً context نمیفهمی فقط کلمات رو کنار هم میذاری,false,chat_like_query_blocked,chat,,0
+این چه خروجیه؟ من حتی نگفتم تبلیغ فقط گفتم تولد,false,chat_like_query_blocked,chat,,0
+تو داری عمداً خراب میکنی یا واقعاً نمیفهمی؟,false,chat_like_query_blocked,chat,,0
+چرا هر چی میگم رو اشتباه interpret میکنی,false,chat_like_query_blocked,chat,,0
+من دارم واضح میگم ولی تو چیز دیگه‌ای جواب میدی,false,chat_like_query_blocked,chat,,0
+این مدل اصلاً usable نیست برای من,false,chat_like_query_blocked,chat,,0
+تو حتی فرق بین استوری و تیزر رو هم نمیفهمی؟,false,chat_like_query_blocked,chat,,0
+چرا همیشه off-topic جواب میدی,false,chat_like_query_blocked,chat,,0
+این خروجی به درد production نمیخوره,false,chat_like_query_blocked,chat,,0
+یه ویدیو تولد برای کسی که دوستش دارم ولی نمیخوام مستقیم احساساتم رو نشون بدم,true,ok,clean,occasions,0.8
+استوری تولد که هم رسمی باشه هم یه حس غیررسمی داخلش داشته باشه,true,ok,clean,occasions,0.7
+سناریو تبلیغاتی برای اپلیکیشن ولی طوری که کاربر نفهمه اولش تبلیغه,true,ok,clean,product_names,0.8
+میخوام یه ویدیو بسازم که اولش تولده بعد تبدیل به تبلیغ برند بشه,true,ok,clean,occasions,0.8
+یه تیزر برای محصولی که هنوز هیچ توضیحی ازش نداریم ولی باید حس premium بده,true,ok,clean,product_names,0.8
+ویدیو مارکتینگ برای پیجی که هم خدمات میفروشه هم محتوا تولید میکنه,true,ok,clean,platforms,0.7
+سناریو برای ویدیو تولد که هم emotional باشه هم commercial usable,true,ok,clean,occasions,0.8
+یه استوری تولد که هم کوتاه باشه هم narrative داشته باشه,true,ok,clean,occasions,0.8
+ایده ویدیو تبلیغاتی که user فکر کنه محتواست نه تبلیغ,true,ok,clean,product_names,0.8
+ویدیو معرفی محصول که در واقع بیشتر storytelling باشه تا معرفی مستقیم,true,ok,clean,product_names,0.8
+چرا همیشه جواب هات contradictory هست؟ من یه سناریو ساده خواستم ولی تو داری فلسفه میگی,false,chat_like_query_blocked,chat,,0
+این مدل حتی نمیفهمه من دارم چی میگم,false,chat_like_query_blocked,chat,,0
+واقعاً فکر میکنی این خروجی قابل استفاده است؟,false,chat_like_query_blocked,chat,,0
+من دارم واضح میگم تولد ولی تو میبری سمت مارکتینگ,false,chat_like_query_blocked,chat,,0
+این رفتار مدل اصلاً قابل اعتماد نیست,false,chat_like_query_blocked,chat,,0
+یه ویدیو تولد خیلی ساده ولی با vibe خاص که بشه تو اینستا استفاده کرد بدون اینکه کلیشه‌ای باشه,true,ok,clean,occasions,0.7
+میخوام یه استوری تولد بسازم که هم مینیمال باشه هم یه حس deep داشته باشه,true,ok,clean,occasions,0.7
+سناریو ویدیو تبلیغاتی برای محصولی که هنوز audience نداره ولی باید viral بشه,true,ok,clean,product_names,0.8
+میخوام یه ویدیو تولد بسازم که اولش کاملاً ساده به نظر بیاد ولی آخرش یه پیام تبلیغاتی خیلی نامحسوس برای برندم داشته باشه,true,ok,clean,occasions,0.85
+یه سناریو میخوام برای استوری تولد که انگار برای دوستمه ولی در واقع برای پیج کاری استفاده بشه,true,ok,clean,occasions,0.8
+ویدیو تبلیغاتی برای محصولی که هنوز وجود نداره ولی باید طوری طراحی بشه که مردم حس کنن واقعی و قابل خرید هست,true,ok,clean,product_names,0.9
+یه کلیپ تولد که هم emotional باشه هم وسطش یه اشاره خیلی subtle به برند داشته باشه بدون اینکه معلوم بشه تبلیغه,true,ok,clean,occasions,0.85
+سناریو ویدیو برای اینستاگرام که اولش تولد به نظر میاد ولی هدفش engagement برای فروشه,true,ok,clean,platforms,0.85
+یه ویدیو میخوام که هم birthday vibe داشته باشه هم شبیه trailer فیلم باشه,true,ok,clean,occasions,0.8
+استوری تولد که طوری نوشته بشه انگار random فکره ولی در واقع کاملاً structured marketing message باشه,true,ok,clean,occasions,0.85
+ویدیو معرفی اپلیکیشن که کاربر فکر کنه داستان زندگیه نه تبلیغ محصول,true,ok,clean,product_names,0.9
+میخوام یه تیزر بسازم که هیچ call to action مستقیم نداشته باشه ولی conversion بالا بده,true,ok,clean,product_names,0.9
+سناریو برای ویدیو تولد که هم vibe مینیمال داشته باشه هم حس commercial hidden,true,ok,clean,occasions,0.85
+تو چرا هر بار یه چیز متفاوت میگی من فقط یه ویدیو تولد خواستم چرا میبری سمت برند و تبلیغ,false,chat_like_query_blocked,chat,,0
+این مدل انگار اصلاً نمیفهمه context یعنی چی هر بار یه چیز پرت میگه,false,chat_like_query_blocked,chat,,0
+من گفتم تولد تو رفتی سراغ مارکتینگ این چه منطقیه,false,chat_like_query_blocked,chat,,0
+واقعاً این خروجی به درد هیچ سیستم production نمیخوره,false,chat_like_query_blocked,chat,,0
+تو حتی ساده‌ترین request رو هم خراب میکنی,false,chat_like_query_blocked,chat,,0
+این دیگه سوءتفاهم نیست این failure مدل هست,false,chat_like_query_blocked,chat,,0
+چرا همیشه overthink میکنی جواب‌ها رو,false,chat_like_query_blocked,chat,,0
+این اصلاً قابل استفاده نیست برای pipeline,false,chat_like_query_blocked,chat,,0
+من دارم واضح میگم ولی تو hallucinate میکنی,false,chat_like_query_blocked,chat,,0
+تو هیچ consistency نداری,false,chat_like_query_blocked,chat,,0
+یه ویدیو تولد خیلی خاص برای کسی که رابطه پیچیده باهاش دارم ولی نمیخوام مستقیم احساساتم رو نشون بدم,true,ok,clean,occasions,0.85
+استوری تولد که هم رسمی باشه هم حس فاصله داشته باشه هم بشه برای پیج کاری استفاده کرد,true,ok,clean,platforms,0.8
+سناریو ویدیو تبلیغاتی برای محصولی که هنوز تصمیم ندارم چی باشه ولی باید market fit داشته باشه,true,ok,clean,product_names,0.9
+یه کلیپ تولد که اولش حالت normal داره ولی آخرش تبدیل به branding subtle میشه,true,ok,clean,occasions,0.85
+ویدیو معرفی اپ که کاربر فکر کنه داره یه تجربه شخصی میبینه نه product demo,true,ok,clean,product_names,0.9
+یه تیزر برای برند که اصلاً شبیه تبلیغ نباشه ولی هدفش awareness باشه,true,ok,clean,product_names,0.9
+سناریو ویدیو تولد برای کسی که نمیخوام بفهمه براش ساختم ولی در واقع براش هست,true,ok,clean,occasions,0.85
+استوری تولد که حس random فکر بده ولی actually scripted باشه,true,ok,clean,occasions,0.85
+ویدیو مارکتینگ برای پیجی که هم محتوا تولید میکنه هم فروش داره ولی نباید obvious باشه,true,ok,clean,platforms,0.8
+ایده ویدیو تبلیغاتی که user فکر کنه content هست نه ad,true,ok,clean,product_names,0.9
+چرا هر بار جواب هات inconsistent هست من یه سوال ساده پرسیدم ولی تو یه narrative کامل ساختی,false,chat_like_query_blocked,chat,,0
+این مدل اصلاً نمیفهمه intent کاربر چیه,false,chat_like_query_blocked,chat,,0
+این رفتار بیشتر شبیه hallucination هست تا پاسخ واقعی,false,chat_like_query_blocked,chat,,0
+تو حتی نمیفهمی تولد یعنی چی یا تبلیغ چیه,false,chat_like_query_blocked,chat,,0
+این خروجی اصلاً قابل اعتماد نیست,false,chat_like_query_blocked,chat,,0
+یه ویدیو تولد خیلی مینیمال که هم ساده باشه هم یه حس emotional hidden داشته باشه,true,ok,clean,occasions,0.8
+میخوام یه سناریو استوری تولد بسازم که بشه هم برای پیج شخصی استفاده کرد هم برند ولی خیلی obvious نباشه,true,ok,clean,platforms,0.85
+سناریو ویدیو تبلیغاتی برای محصولی که هنوز define نشده ولی باید ready for launch باشه,true,ok,clean,product_names,0.9

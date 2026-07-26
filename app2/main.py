@@ -1,42 +1,36 @@
 # app2/main.py
-from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 import logging
-
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-from sqlalchemy import text
+from contextlib import asynccontextmanager
 
 # ======================
 # Sentry
 # ======================
 import sentry_sdk
-from sentry_sdk.integrations.fastapi import FastApiIntegration
-from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+from app2.api.routes import router as search_router
 
 # ======================
 # App imports
 # ======================
 from app2.core.settings import get_settings
-from app2.api.routes import router as search_router
+
+# Exceptions
+from app2.exceptions.handlers import (
+    general_exception_handler,
+)
+from app2.middleware.logging import LoggingMiddleware
 
 # Middleware
 from app2.middleware.request_id import RequestIDMiddleware
-from app2.middleware.logging import LoggingMiddleware
 from app2.middleware.timing import TimingMiddleware
-
-# Exceptions
-from app2.exceptions.errors import AppBaseError
-from app2.exceptions.handlers import (
-    app_exception_handler,
-    general_exception_handler,
-)
 
 # Health
 from app2.monitoring.health import router as health_router
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 # ======================
 # Settings & Lifespan

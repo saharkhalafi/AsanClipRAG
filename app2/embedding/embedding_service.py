@@ -1,16 +1,16 @@
 # app2/services/embedding_service.py
 
+import logging
 import os
 import time
-import logging
+from typing import Optional
+
 import numpy as np
-
-from google import genai
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-from httpx import ConnectError, ConnectTimeout
-
 from app2.cache.cache_service import CacheService
-from app2.exceptions import ValidationError, DatabaseError
+from app2.exceptions import DatabaseError, ValidationError
+from google import genai
+from httpx import ConnectError, ConnectTimeout
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger("app2.embedding")
 
@@ -98,5 +98,12 @@ class EmbeddingService:
             raise DatabaseError(f"Embedding service failed: {str(e)}") from e
 
 
-# Singleton
-embedding_service = EmbeddingService()
+# Singleton — lazy init so imports work without GEMINI_API_KEY (e.g. CI unit tests)
+_embedding_service: Optional[EmbeddingService] = None
+
+
+def get_embedding_service() -> EmbeddingService:
+    global _embedding_service
+    if _embedding_service is None:
+        _embedding_service = EmbeddingService()
+    return _embedding_service

@@ -1,7 +1,8 @@
 # app2/services/caption_service.py
-from typing import List, Dict, Optional
-from sqlalchemy.orm import Session
+from typing import Dict, List, Optional
+
 from app2.db.models import ProductCaption
+from sqlalchemy.orm import Session
 
 
 class CaptionService:
@@ -32,7 +33,7 @@ class CaptionService:
             self.db.query(ProductCaption)
             .filter(
                 ProductCaption.product_id.in_(normalized_ids),
-                ProductCaption.is_active == True,
+                ProductCaption.is_active.is_(True),
             )
             .order_by(
                 ProductCaption.priority.asc(),

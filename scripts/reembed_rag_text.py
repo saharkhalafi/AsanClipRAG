@@ -1,9 +1,9 @@
-from sqlalchemy import create_engine, text
-from app2.embedding.embedding_service import EmbeddingService
-import time
 import os
-import numpy as np
+import time
 
+import numpy as np
+from app2.embedding.embedding_service import EmbeddingService
+from sqlalchemy import create_engine, text
 
 # =========================
 # CONFIG

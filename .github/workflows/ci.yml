@@ -1,0 +1,177 @@
+name: AsanClip CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install lint dependencies
+        run: pip install ruff
+
+      - name: Ruff check
+        run: ruff check app2 tests scripts
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: lint
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: asanclip_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/asanclip_test
+      REDIS_URL: redis://localhost:6379/0
+      ENVIRONMENT: test
+      ENABLE_CACHE: "false"
+      ENABLE_PII_DETECTION: "false"
+      PYTHONPATH: .
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+          python -m spacy download en_core_web_sm
+
+      - name: Prepare database
+        run: |
+          python - <<'PY'
+          import os
+          from sqlalchemy import create_engine, text
+          url = os.environ["DATABASE_URL"]
+          engine = create_engine(url, isolation_level="AUTOCOMMIT")
+          with engine.connect() as conn:
+              conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+              conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
+          PY
+          alembic upgrade head
+
+      - name: Run unit tests
+        run: pytest tests/ -v --tb=short
+
+      - name: Run integration tests
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -n "$GEMINI_API_KEY" ]; then
+            pytest tests/ -v --tb=short -m integration
+          else
+            echo "Skipping integration tests (GEMINI_API_KEY secret not configured)"
+          fi
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: asanclip-rag:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  alembic-check:
+    name: Alembic Migration Check
+    runs-on: ubuntu-latest
+    needs: lint
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: asanclip_migration_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/asanclip_migration_test
+      PYTHONPATH: .
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run migrations
+        run: |
+          python - <<'PY'
+          import os
+          from sqlalchemy import create_engine, text
+          url = os.environ["DATABASE_URL"]
+          engine = create_engine(url, isolation_level="AUTOCOMMIT")
+          with engine.connect() as conn:
+              conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+              conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
+          PY
+          alembic upgrade head
+
+      - name: Verify migration head
+        run: alembic current

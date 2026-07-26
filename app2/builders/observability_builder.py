@@ -1,6 +1,7 @@
 # app2/builders/observability_builder.py
-from typing import Dict, Any, List, Optional
 import uuid
+from typing import Any, Dict, List, Optional
+
 
 class ObservabilityBuilder:
     @staticmethod

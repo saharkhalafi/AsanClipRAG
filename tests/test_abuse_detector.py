@@ -1,8 +1,9 @@
 import csv
 from pathlib import Path
+
 from app2.firewall.abuse_detector import AbuseDetector
 
-DATASET_PATH = Path("app2/tests/Data_Test/abuse_eval.csv")
+DATASET_PATH = Path(__file__).resolve().parent / "Data_Test" / "abuse_eval.csv"
 
 
 def load_dataset():

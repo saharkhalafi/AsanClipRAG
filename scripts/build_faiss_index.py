@@ -1,13 +1,12 @@
 # scripts/build_faiss_index.py
-import numpy as np
-import faiss
-import os
-import json
 import ast
-from sqlalchemy import create_engine, text
-import pandas as pd
+import json
+import os
 
-from app2.retrieval.faiss_index import FaissIndex   # ← استفاده از کلاس جدید
+import numpy as np
+import pandas as pd
+from app2.retrieval.faiss_index import FaissIndex  # ← استفاده از کلاس جدید
+from sqlalchemy import create_engine, text
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 

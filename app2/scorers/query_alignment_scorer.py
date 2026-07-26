@@ -1,6 +1,7 @@
 # app2/scorers/query_alignment_scorer.py
-from typing import Dict, Any, List,Optional
 import re
+from typing import Any, Dict, List, Optional
+
 
 class QueryAlignmentScorer:
     """مسئول محاسبه boost alignment بین query و نتایج"""
@@ -76,7 +77,7 @@ class QueryAlignmentScorer:
 
         # Semantic bonus
         semantic_matches = (semantic or {}).get("matches", {}) or {}
-        for field, bonus in [("occasions", 0.18), ("product_types", 0.10), 
+        for field, bonus in [("occasions", 0.18), ("product_types", 0.10),
                            ("product_names", 0.08), ("platforms", 0.04)]:
             if field in semantic_matches:
                 val = str(semantic_matches[field].get("value") or "").lower().strip()

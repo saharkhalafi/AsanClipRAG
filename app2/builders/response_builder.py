@@ -1,5 +1,6 @@
 # app2/builders/response_builder.py
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
 
 class ResponseBuilder:
     @staticmethod
@@ -12,10 +13,10 @@ class ResponseBuilder:
         results: List[Dict],
         timings: Dict,
         latency_total_ms: float,
-        final_mode: str,               
+        final_mode: str,
         observability: Dict
     ) -> Dict[str, Any]:
-        
+
         return {
             "mode": final_mode,
             "query": query,
