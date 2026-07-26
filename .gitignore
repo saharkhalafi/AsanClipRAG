@@ -52,6 +52,8 @@ tagger.txt
 
 #csv or data
 *.csv
+!tests/Data_Test/
+!tests/Data_Test/**
 *.xlsx
 
 #py files

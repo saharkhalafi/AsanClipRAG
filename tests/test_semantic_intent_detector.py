@@ -1,9 +1,9 @@
 import csv
 from pathlib import Path
+
 from app2.firewall.semantic_intent import SemanticIntentDetector
 
-
-DATASET_PATH = Path("app2/tests/Data_Test/semantic_eval.csv")
+DATASET_PATH = Path(__file__).resolve().parent / "Data_Test" / "semantic_eval.csv"
 
 
 def load_dataset():
@@ -102,7 +102,7 @@ def test_semantic_intent_evaluation(capsys):
             "قالب",
             "استوری",
             "کلیپ",
-        
+
         ],
         "platforms": [
             "اینستاگرام",
