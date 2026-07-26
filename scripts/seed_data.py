@@ -1,5 +1,5 @@
-from app2.db.session import get_db
 from app2.db.models import AsanClipProduct
+from app2.db.session import get_db
 from sqlalchemy.orm import Session
 
 

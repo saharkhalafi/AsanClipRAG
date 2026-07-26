@@ -1,8 +1,8 @@
 # scripts/auto_generate_captions.py
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from app2.db.session import get_db  # session factory خودت
 from app2.services.caption_service import CaptionService
-from app2.db.session import get_db   # session factory خودت
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 
 def detect_occasion(text2: str) -> tuple:
@@ -10,7 +10,7 @@ def detect_occasion(text2: str) -> tuple:
     if not text2:
         return None, None
     t = text2.lower()
-    
+
     if any(k in t for k in ["تولد", "birthday", "سال تولد", "birth day"]):
         return "تولد", "occasion"
     elif any(k in t for k in ["سالگرد", "anniversary", "سالگرد ازدواج"]):
@@ -30,11 +30,11 @@ def detect_occasion(text2: str) -> tuple:
     elif any(k in t for k in ["روز مادر","روز زن"]):
         return "روز مادر", "occasion"
     elif any(k in t for k in ["روز معلم"]):
-        return "روز معلم", "occasion" 
+        return "روز معلم", "occasion"
     elif any(k in t for k in ["روز مهندس"]):
-        return "روز مهندس", "occasion" 
+        return "روز مهندس", "occasion"
     elif any(k in t for k in ["پیام تسلیت", "تسلیت"]):
-        return "پیام تسلیت", "occasion"   
+        return "پیام تسلیت", "occasion"
     elif any(k in t for k in ["تخفیف", "حراج","فروش ویژه", "off", "sale"]):
         return "تخفیف", "occasion"
     elif any(k in t for k in ["بلک فرایدی", "black friday", "جمعه سیاه"]):
@@ -50,15 +50,15 @@ def detect_occasion(text2: str) -> tuple:
 
 def auto_generate_captions(db: Session, limit: int = 10000):
     service = CaptionService(db)
-    
+
     print("🔄 شروع تشخیص و تولید کپشن...")
 
     # استفاده صحیح از text()
     query = text("""
-        SELECT id, occasion, name, product_type, short_description 
-        FROM asanclipproducts 
-        WHERE occasion IS NOT NULL 
-           OR name IS NOT NULL 
+        SELECT id, occasion, name, product_type, short_description
+        FROM asanclipproducts
+        WHERE occasion IS NOT NULL
+           OR name IS NOT NULL
         LIMIT :limit
     """)
 
@@ -68,9 +68,9 @@ def auto_generate_captions(db: Session, limit: int = 10000):
     for p in products:
         product_id = p.id
         text2 = f"{p.occasion or ''} {p.name or ''} {p.product_type or ''} {p.short_description or ''}"
-        
+
         category, _ = detect_occasion(text2)
-        
+
         if category:
             if category == "تولد":
                 service.add_caption(product_id, "تولدت مبارک عزیزم 🎂✨ امسال پر از اتفاق‌های قشنگ برات باشه", "occasion", category, 1)
@@ -230,7 +230,7 @@ def auto_generate_captions(db: Session, limit: int = 10000):
                 service.add_caption(product_id, "همه دنیا خلاصه میشه در آغوش مادر ❤️", "occasion", category, 7)
                 service.add_caption(product_id, "مامان یعنی بهشت روی زمین 🌸", "occasion", category, 8)
                 service.add_caption(product_id, "عشق یعنی مادر ❤️", "occasion", category, 9)
-                service.add_caption(product_id, "روزت مبارک مهربون‌ترین آدم دنیا 💐", "occasion", category, 10)  
+                service.add_caption(product_id, "روزت مبارک مهربون‌ترین آدم دنیا 💐", "occasion", category, 10)
                 total += 10
             elif category == "روز معلم":
                 service.add_caption(product_id, "روز معلم مبارک 🌟 سازنده آینده‌ها", "occasion", category, 1)
@@ -335,7 +335,7 @@ def auto_generate_captions(db: Session, limit: int = 10000):
                 service.add_caption(product_id, "اولین‌ها همیشه خاص‌ترن 😎", "occasion", category, 19)
                 service.add_caption(product_id, "این یکی رو از دست نده ⚡🔥", "occasion", category, 20)
                 total += 20
-            elif category == "افتتاحیه":     
+            elif category == "افتتاحیه":
                 service.add_caption(product_id, "بالاخره انتظارها تموم شد 🎉 امروز یک شروع تازه‌ست… یک افتتاحیه بزرگ که قراره کلی اتفاق خوب رو شروع کنه. خوش اومدید به این لحظه خاص ✨", "occasion", category, 1)
                 service.add_caption(product_id, "افتتاحیه فقط یک شروع نیست… یک رویاست که واقعی شده 💫 از امروز اینجا قراره بهترین تجربه‌ها ساخته بشه. خوش آمدید ❤️", "occasion", category, 2)
                 service.add_caption(product_id, "امروز یه روز معمولی نیست… امروز روز شروع یک مسیر جدیده 🚀 افتتاحیه‌ای که پر از انرژی، امید و اتفاق‌های خوبه ✨", "occasion", category, 3)
@@ -345,20 +345,20 @@ def auto_generate_captions(db: Session, limit: int = 10000):
                 service.add_caption(product_id, "لحظه‌ای که مدت‌ها منتظرش بودیم بالاخره رسید 💫 افتتاحیه‌ای پر از هیجان، انرژی مثبت و شروعی قدرتمند 🚀", "occasion", category, 7)
                 service.add_caption(product_id, "از امروز اینجا فقط یک اسم نیست… یک تجربه‌ست ✨ افتتاحیه‌ای که قراره مسیر جدیدی رو بسازه ❤️", "occasion", category, 8)
                 service.add_caption(product_id, "این فقط یک افتتاحیه نیست… این شروع یک مسیر بزرگه 🚀 از امروز همه چیز متفاوت خواهد بود ✨ خوش آمدید ❤️", "occasion", category, 9)
-                service.add_caption(product_id, "درهای یک دنیای جدید باز شد 🎊 افتتاحیه‌ای برای شروع بهترین لحظه‌ها، بهترین تجربه‌ها و بهترین خاطره‌ها ✨", "occasion", category, 10)            
+                service.add_caption(product_id, "درهای یک دنیای جدید باز شد 🎊 افتتاحیه‌ای برای شروع بهترین لحظه‌ها، بهترین تجربه‌ها و بهترین خاطره‌ها ✨", "occasion", category, 10)
                 total += 10
-            elif category == "دعوت":     
+            elif category == "دعوت":
                 service.add_caption(product_id, "با کمال احترام و شادی از شما دعوت می‌کنیم در این لحظه خاص کنار ما باشید 🎉 حضورتان باعث افتخار و گرمای این رویداد خواهد بود ✨", "occasion", category, 1)
                 service.add_caption(product_id, "دعوتید به یک لحظه متفاوت… جایی که قرار است خاطره‌ها ساخته شوند 💫 خوشحال می‌شویم در کنار ما باشید ❤️", "occasion", category, 2)
                 service.add_caption(product_id, "حضور شما برای ما فقط یک همراهی نیست، بلکه بخشی از زیبایی این اتفاق است 🌿 با افتخار دعوت‌تان می‌کنیم ✨", "occasion", category, 3)
                 service.add_caption(product_id, "به جمع ما بپیوندید تا با هم لحظه‌ای خاص و به‌یادماندنی بسازیم 🎊 حضور شما ارزشمندترین بخش این رویداد است ❤️", "occasion", category, 4)
                 service.add_caption(product_id, "این یک دعوت ساده نیست… یک دعوت به شادی، همراهی و ساختن خاطره‌های ماندگار است ✨ خوشحال می‌شویم کنارمان باشید 💫", "occasion", category, 5)
                 service.add_caption(product_id, "با عشق و احترام از شما دعوت می‌کنیم در این رویداد خاص حضور داشته باشید 🌸 بودن شما این لحظه را کامل‌تر می‌کند ❤️", "occasion", category, 6)
-                service.add_caption(product_id, "دعوتید به جشنی از جنس لحظه‌های خوب 🎉 حضورتان باعث افتخار ما و زیبایی این جمع خواهد بود ✨", "occasion", category, 7)  
+                service.add_caption(product_id, "دعوتید به جشنی از جنس لحظه‌های خوب 🎉 حضورتان باعث افتخار ما و زیبایی این جمع خواهد بود ✨", "occasion", category, 7)
                 service.add_caption(product_id, "یک لحظه خاص بدون شما کامل نیست 💫 از شما دعوت می‌کنیم همراه ما در این تجربه زیبا باشید ❤️", "occasion", category, 8)
                 service.add_caption(product_id, "این رویداد با حضور شما معنا پیدا می‌کند 🌿 با افتخار از شما دعوت می‌کنیم کنار ما باشید ✨", "occasion", category, 9)
                 service.add_caption(product_id, "بیایید کنار هم یک خاطره ماندگار بسازیم 🎊 شما مهمان ویژه این لحظه هستید، خوشحال می‌شویم حضور داشته باشید ❤️", "occasion", category, 10)
-                total += 10    
+                total += 10
 
     db.commit()
     print(f"✅ تمام شد! {total} کپشن برای محصولات تولید شد.")

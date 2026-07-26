@@ -1,6 +1,7 @@
 # app2/repositories/base.py
+from typing import TypeVar
+
 from sqlalchemy.orm import Session
-from typing import TypeVar, Generic
 
 T = TypeVar("T")
 

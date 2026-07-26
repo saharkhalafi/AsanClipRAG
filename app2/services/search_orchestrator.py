@@ -1,43 +1,35 @@
 # app2/services/search_orchestrator.py
 
-from typing import Dict, Any, List, Optional
-import re
 import time
-import numpy as np
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Dict, List, Optional
 
-from app2.embedding.embedding_service import EmbeddingService
-from app2.services.query_preprocessor import QueryPreprocessor
-from app2.metadata.metadata_loader import MetadataLoader
-from app2.metadata.metadata_extractor import MetadataExtractor
-
-from app2.retrieval.retrieval_orchestrator import RetrievalOrchestrator
-from app2.retrieval.vector_search import VectorSearchService
-from app2.retrieval.bm25_search import BM25SearchService
-from app2.retrieval.metadata_search import MetadataSearchService
-
-from app2.ranking.metadata_boost import MetadataBooster
-from app2.ranking.unified_ranker import UnifiedRanker
-from app2.firewall.semantic_intent import SemanticIntentDetector
-from app2.services.retrieval_quality import RetrievalQualityModel
-from app2.utils.filters import normalize_filters
-from app2.routing.query_router import QueryRouter
-
-from app2.cache.cache_service import CacheService
-from app2.services.caption_service import CaptionService
-
-from app2.builders.response_builder import ResponseBuilder
+import numpy as np
 from app2.builders.observability_builder import ObservabilityBuilder
-from app2.scorers.query_alignment_scorer import QueryAlignmentScorer
+from app2.builders.response_builder import ResponseBuilder
+from app2.cache.cache_service import CacheService
 
 # Constants
-from app2.config.constants import (
-    MAX_QUERY_LENGTH,
-    DEFAULT_TOP_K
-)
+from app2.config.constants import DEFAULT_TOP_K
+from app2.embedding.embedding_service import EmbeddingService
 
 # Centralized Exceptions
-from app2.exceptions import ValidationError, DatabaseError
+from app2.exceptions import DatabaseError, ValidationError
+from app2.firewall.semantic_intent import SemanticIntentDetector
+from app2.metadata.metadata_extractor import MetadataExtractor
+from app2.metadata.metadata_loader import MetadataLoader
+from app2.ranking.metadata_boost import MetadataBooster
+from app2.ranking.unified_ranker import UnifiedRanker
+from app2.retrieval.bm25_search import BM25SearchService
+from app2.retrieval.metadata_search import MetadataSearchService
+from app2.retrieval.retrieval_orchestrator import RetrievalOrchestrator
+from app2.retrieval.vector_search import VectorSearchService
+from app2.routing.query_router import QueryRouter
+from app2.scorers.query_alignment_scorer import QueryAlignmentScorer
+from app2.services.caption_service import CaptionService
+from app2.services.query_preprocessor import QueryPreprocessor
+from app2.services.retrieval_quality import RetrievalQualityModel
+from app2.utils.filters import normalize_filters
 
 
 class SearchOrchestrator:

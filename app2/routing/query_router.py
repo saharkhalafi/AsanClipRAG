@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 
 class RouteDecision:
@@ -30,7 +30,6 @@ class QueryRouter:
         signals = retrieval_quality.get("signals", {})
 
         top1 = float(signals.get("top1", 0.0))
-        top2 = float(signals.get("top2", 0.0))
         margin = float(signals.get("margin", 0.0))
         density = float(signals.get("density", 0.0))
         entropy = float(signals.get("entropy", 1.0))

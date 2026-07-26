@@ -1,7 +1,7 @@
-from typing import List, Dict, Any, Optional
-from sqlalchemy import text
+from typing import Any, Dict, List, Optional
 
 from app2.retrieval.hybrid_filter import HybridFilterBuilder
+from sqlalchemy import text
 
 
 class BM25SearchService:

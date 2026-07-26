@@ -9,7 +9,6 @@ from typing import Any, Dict
 from uuid import UUID
 
 import numpy as np
-
 from app2.db.session import SessionLocal
 from app2.repositories.observability_repository import ObservabilityRepository
 

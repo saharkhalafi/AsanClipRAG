@@ -1,5 +1,5 @@
-from typing import Any, Dict, List, Optional
 import re
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import text
 

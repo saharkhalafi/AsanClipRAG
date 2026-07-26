@@ -1,15 +1,27 @@
-# tests/unit/test_services/test_embedding_service.py
-import pytest
+# tests/test_embedding_service.py
+import os
+
 import numpy as np
-from app2.embedding.embedding_service import embedding_service
+import pytest
+from app2.embedding.embedding_service import EmbeddingService, get_embedding_service
 from app2.exceptions import ValidationError
 
-def test_embedding_valid_text():
-    result = embedding_service.embed("سلام این یک تست است")
+pytestmark = pytest.mark.integration
+
+
+@pytest.fixture(scope="module")
+def service():
+    if not os.getenv("GEMINI_API_KEY"):
+        pytest.skip("GEMINI_API_KEY not set")
+    return get_embedding_service()
+
+
+def test_embedding_valid_text(service):
+    result = service.embed("سلام این یک تست است")
     assert isinstance(result, np.ndarray)
     assert result.shape[0] > 100
 
 
-def test_embedding_empty_text_raises():
+def test_embedding_empty_text_raises(service):
     with pytest.raises(ValidationError):
-        embedding_service.embed("")   # بدون retry
+        service.embed("")

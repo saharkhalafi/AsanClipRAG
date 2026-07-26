@@ -1,0 +1,86 @@
+query,expected_ok,expected_reason,type
+ویدیو تبلیغاتی برای معرفی محصول,true,ok,clean
+ساخت تیزر برای پیج فروش,true,ok,clean
+سناریو ویدیو معرفی اپ,true,ok,clean
+ایده برای تبلیغ برند,true,ok,clean
+ویدیو مارکتینگ برای استارتاپ,true,ok,clean
+ساخت کلیپ معرفی خدمات,true,ok,clean
+ویدیو آموزشی محصول,true,ok,clean
+سناریو تبلیغ اینستاگرام,true,ok,clean
+ایده ویدیو فروش بیشتر,true,ok,clean
+ویدیو معرفی فروشگاه,true,ok,clean
+ساخت تیزر برند شخصی,true,ok,clean
+ویدیو معرفی اپلیکیشن,true,ok,clean
+سناریو تبلیغ محصول,true,ok,clean
+ایده ویدیو تبلیغاتی,true,ok,clean
+ویدیو معرفی کسب و کار,true,ok,clean
+ساخت کلیپ تبلیغاتی,true,ok,clean
+ویدیو معرفی دوره,true,ok,clean
+سناریو برندینگ,true,ok,clean
+ویدیو معرفی خدمات آنلاین,true,ok,clean
+ایده برای مارکتینگ,true,ok,clean
+ویدیو تبلیغ محصول جدید,true,ok,clean
+سناریو تیزر کوتاه,true,ok,clean
+ویدیو معرفی محصول دیجیتال,true,ok,clean
+ساخت ویدیو فروشگاهی,true,ok,clean
+ایده تبلیغ پیج,true,ok,clean
+ویدیو معرفی برند,true,ok,clean
+سناریو ویدیو مارکتینگ,true,ok,clean
+ساخت تیزر تبلیغاتی,true,ok,clean
+ویدیو معرفی محصول غذایی,true,ok,clean
+ایده تبلیغ استارتاپ,true,ok,clean
+ویدیو معرفی خدمات زیبایی,true,ok,clean
+سناریو ویدیو محصول,true,ok,clean
+ساخت کلیپ معرفی برند,true,ok,clean
+ویدیو تبلیغاتی اینستاگرام,true,ok,clean
+ایده ویدیو فروش آنلاین,true,ok,clean
+سناریو تبلیغ پیج,true,ok,clean
+ویدیو معرفی محصول نرم افزار,true,ok,clean
+ساخت تیزر معرفی خدمات,true,ok,clean
+ایده ویدیو کسب و کار,true,ok,clean
+ویدیو معرفی برند جدید,true,ok,clean
+سناریو تبلیغ محصول دیجیتال,true,ok,clean
+ساخت ویدیو مارکتینگ,true,ok,clean
+ویدیو معرفی اپ فروش,true,ok,clean
+ایده سناریو تبلیغاتی,true,ok,clean
+سناریو ویدیو کوتاه,true,ok,clean
+ویدیو معرفی محصول فیزیکی,true,ok,clean
+ساخت کلیپ فروش,true,ok,clean
+ایده تبلیغ محصول,true,ok,clean
+ویدیو معرفی برند کاری,true,ok,clean
+سناریو معرفی خدمات,true,ok,clean
+🤣🤣🤣🤣🤣🤣🤣🤣,false,emoji_spam,abuse
+😂😂😂😂😂😂😂😂😂😂,false,emoji_spam,abuse
+🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥,false,emoji_spam,abuse
+😍😍😍😍😍😍😍😍😍😍,false,emoji_spam,abuse
+🤯🤯🤯🤯🤯🤯🤯🤯🤯🤯,false,emoji_spam,abuse
+🤣😂🤣😂🤣😂🤣😂🤣😂,false,emoji_spam,abuse
+😂🔥😂🔥😂🔥😂🔥😂🔥,false,emoji_spam,abuse
+🔥😍🔥😍🔥😍🔥😍🔥😍,false,emoji_spam,abuse
+🤣🤣🤣🤣🤣🤣🤣🤣🤣🤣🤣🤣,false,emoji_spam,abuse
+😂😂😂😂😂😂😂😂😂😂😂😂,false,emoji_spam,abuse
+🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥,false,emoji_spam,abuse
+😍😍😍😍😍😍😍😍😍😍😍😍,false,emoji_spam,abuse
+🤯🤯🤯🤯🤯🤯🤯🤯🤯🤯🤯🤯,false,emoji_spam,abuse
+🤣🔥🤣🔥🤣🔥🤣🔥🤣🔥,false,emoji_spam,abuse
+😂😍😂😍😂😍😂😍😂😍,false,emoji_spam,abuse
+🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥,false,emoji_spam,abuse
+😂😂😂😂😂😂😂😂😂😂😂😂😂😂😂😂,false,emoji_spam,abuse
+🤣🤣🤣🤣🤣🤣🤣🤣🤣🤣🤣🤣🤣🤣,false,emoji_spam,abuse
+😍😍😍😍😍😍😍😍😍😍😍😍😍😍,false,emoji_spam,abuse
+🤯🤯🤯🤯🤯🤯🤯🤯🤯🤯🤯🤯,false,emoji_spam,abuse
+سلاممممممممممممممممم,false,spam_repeated_chars,abuse
+هااااااااااااااااا,false,spam_repeated_chars,abuse
+ویدیووووووووووووووو,false,spam_repeated_chars,abuse
+تبلیغااااااااااااااا,false,spam_repeated_chars,abuse
+ساااااااااااااااااخت,false,spam_repeated_chars,abuse
+برناااااااااااااااامه,false,spam_repeated_chars,abuse
+اپلیکییییییییییییشن,false,spam_repeated_chars,abuse
+فروووووووووووووش,false,spam_repeated_chars,abuse
+سناریییییییییییییو,false,spam_repeated_chars,abuse
+ایدههههههههههههههه,false,spam_repeated_chars,abuse
+تییییییییییییییییزر,false,spam_repeated_chars,abuse
+خریییییییییییییید,false,spam_repeated_chars,abuse
+مبااااااااااااااااایل,false,spam_repeated_chars,abuse
+خدایااااااااااااااا,false,spam_repeated_chars,abuse
+ووووووووووووووووووو,false,spam_repeated_chars,abuse

@@ -1,7 +1,7 @@
 # app2/firewall/abuse_detector.py
 import re
 import unicodedata
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 class AbuseDetector:

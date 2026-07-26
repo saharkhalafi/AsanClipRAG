@@ -1,12 +1,11 @@
 # app2/monitoring/health.py
 import os
 
+from app2.core.settings import get_settings
+from app2.db.session import get_db
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-
-from app2.core.settings import get_settings
-from app2.db.session import get_db
 
 router = APIRouter(tags=["monitoring"])
 

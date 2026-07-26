@@ -1,8 +1,9 @@
-import faiss
-import numpy as np
 import pickle
 from pathlib import Path
 from typing import List, Tuple
+
+import faiss
+import numpy as np
 
 
 class FaissIndex:

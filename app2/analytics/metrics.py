@@ -1,7 +1,7 @@
 from typing import Any, Dict, List
 
-from sqlalchemy import func
 from app2.db.models import RetrievalLog
+from sqlalchemy import func
 
 
 class ObservabilityMetrics:
@@ -84,7 +84,7 @@ class ObservabilityMetrics:
                 "top_result_score": r.top_result_score,
                 "manual_intent_label": r.manual_intent_label,
                 "manual_relevance_label": r.manual_relevance_label,
-                # Cache fields 
+                # Cache fields
                 "cache_hit": r.cache_hit,
                 "cache_layer": r.cache_layer,
             }

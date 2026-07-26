@@ -1,7 +1,6 @@
 # app2/repositories/observability_repository.py
 import logging
-from typing import Dict, Any
-from sqlalchemy.orm import Session
+from typing import Any, Dict
 
 from app2.db.models import RetrievalLog
 from app2.repositories.base import BaseRepository

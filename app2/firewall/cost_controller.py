@@ -2,12 +2,11 @@
 import os
 import re
 from datetime import date
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
-from sqlalchemy.orm import Session
+from app2.db.models import FirewallDailyUsage
 from sqlalchemy.exc import SQLAlchemyError
-
-from app2.db.models import FirewallDailyUsage   
+from sqlalchemy.orm import Session
 
 
 class CostController:

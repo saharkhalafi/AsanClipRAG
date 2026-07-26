@@ -1,8 +1,7 @@
 from typing import Any, Dict, List
 
-from sqlalchemy.orm import Session
-
 from app2.db.models import RetrievalLog
+from sqlalchemy.orm import Session
 
 
 class ObservabilityRepository:

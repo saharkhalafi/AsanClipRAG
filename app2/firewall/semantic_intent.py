@@ -2,12 +2,11 @@
 from __future__ import annotations
 
 import re
-import numpy as np
 from difflib import SequenceMatcher
-from typing import Dict, List, Any, Optional
-from sqlalchemy import text
-from app2.exceptions import ValidationError
+from typing import Any, Dict, List, Optional
 
+import numpy as np
+from sqlalchemy import text
 
 # =========================================================
 # HELPERS

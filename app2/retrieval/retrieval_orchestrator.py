@@ -1,15 +1,10 @@
 # app2/retrieval/retrieval_orchestrator.py
 
-from typing import Dict, Any, List, Optional
 import time
-import numpy as np
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Dict, List, Optional
 
-from app2.retrieval.vector_search import VectorSearchService
-from app2.retrieval.bm25_search import BM25SearchService
-from app2.retrieval.metadata_search import MetadataSearchService
-from app2.services.retrieval_quality import RetrievalQualityModel
-from app2.routing.query_router import QueryRouter
+import numpy as np
 
 
 class RetrievalOrchestrator:
