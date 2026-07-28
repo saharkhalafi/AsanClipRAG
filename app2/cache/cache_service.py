@@ -1,11 +1,12 @@
 # app2/cache/cache_service.py
 
-import pickle
 import hashlib
 import logging
-from typing import Any, Optional, Dict
+import pickle
+from typing import Any, Dict, Optional
 
 import redis
+
 from app2.core.settings import get_settings
 
 logger = logging.getLogger("app2.cache")
