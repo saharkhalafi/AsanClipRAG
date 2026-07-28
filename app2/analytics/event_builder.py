@@ -16,6 +16,70 @@ def _extract_cost(fw_context: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _intent_features(
+    fw_context: dict[str, Any],
+    result: dict[str, Any] | None = None,
+    query_raw: str = "",
+) -> dict[str, Any]:
+    """RIS-ready features stored in retrieval_logs.extra."""
+    signals = fw_context.get("signals") or {}
+    semantic = signals.get("semantic") or {}
+    relevance = signals.get("relevance") or {}
+
+    query_text = (
+        fw_context.get("normalized_query")
+        or (result or {}).get("query")
+        or query_raw
+        or ""
+    )
+    query_text = str(query_text).strip()
+
+    top1_vector_sim = relevance.get("top1_sim")
+    semantic_score = semantic.get("best_score")
+    if semantic_score is None:
+        semantic_score = fw_context.get("semantic_score")
+
+    features: dict[str, Any] = {
+        "semantic_score": semantic_score,
+        "semantic_ok": semantic.get("ok"),
+        "semantic_reason": semantic.get("reason"),
+        "top1_vector_sim": top1_vector_sim,
+        "relevance_final_score": relevance.get("final_score"),
+        "relevance_avg_sim": relevance.get("avg_sim"),
+        "relevance_ok": relevance.get("ok"),
+        "relevance_reason": relevance.get("reason"),
+        "query_length": len(query_text),
+        "token_count": len(query_text.split()) if query_text else 0,
+    }
+
+    if result is not None:
+        obs = result.get("observability") or {}
+        mode = result.get("mode")
+        rq_score = float(
+            obs.get("retrieval_quality_score")
+            or (result.get("retrieval_quality") or {}).get("retrieval_quality")
+            or 0.0
+        )
+        top_result_score = float(obs.get("top_result_score") or 0.0)
+        result_count = int(obs.get("result_count") or len(result.get("results") or []))
+
+        weak = (
+            mode in ("invalid_query", "no_results", "empty_query")
+            or result_count == 0
+            or (rq_score < 0.35 and top_result_score < 0.45)
+        )
+        features["results_looked_weak"] = weak
+        features["retrieval_quality_score"] = rq_score
+        features["top_result_score"] = top_result_score
+        features["result_count"] = result_count
+        features["response_mode"] = mode
+    else:
+        features["results_looked_weak"] = True
+        features["response_mode"] = "blocked_by_firewall"
+
+    return features
+
+
 class SearchEventBuilder:
     """
     Usage — firewall blocked:
@@ -55,21 +119,29 @@ class SearchEventBuilder:
     ) -> dict[str, Any]:
         signals = fw_context.get("signals") or {}
         reason  = fw_context.get("reason") or "blocked"
+        semantic = signals.get("semantic") or {}
+        intent = _intent_features(fw_context, result=None, query_raw=query_raw)
 
         payload: dict[str, Any] = {
             # identity
             "request_id":   request_id,
             "session_id":   session_id,
             "user_id":      user_id,
-            # query (normalised = raw because preprocessor never ran)
+            # query
             "query_raw":        query_raw,
-            "query_normalized": query_raw,
+            "query_normalized": fw_context.get("normalized_query") or query_raw,
+            "query_length":     intent.get("query_length"),
+            "token_count":      intent.get("token_count"),
             # firewall
             "blocked":          True,
             "block_reason":     reason,
             "firewall_allowed": False,
             "firewall_reason":  reason,
             "firewall_signals": signals,
+            # semantic (for RIS calibration)
+            "semantic":            semantic,
+            "semantic_best_score": intent.get("semantic_score"),
+            "semantic_best_field": semantic.get("best_field"),
             # latency
             "latency_firewall_ms": fw_latency,
             "latency_total_ms":    total_latency,
@@ -81,10 +153,11 @@ class SearchEventBuilder:
             "fallback_used":  False,
             "attempt_count":  0,
             "candidate_count": 0,
+            "top_result_score": intent.get("top1_vector_sim"),
             # intent dataset
             "manual_intent_label":    None,
             "manual_relevance_label": None,
-            "extra": {},
+            "extra": intent,
         }
         payload.update(_extract_cost(fw_context))
         return payload
@@ -118,6 +191,10 @@ class SearchEventBuilder:
 
         attempt_history = obs.get("attempt_history") or []
         signals = fw_context.get("signals") or {}
+        intent = _intent_features(fw_context, result=result, query_raw=obs.get("query_raw") or "")
+
+        merged_extra = dict(obs.get("extra") or {})
+        merged_extra.update(intent)
 
         payload: dict[str, Any] = {
             # identity
@@ -181,8 +258,8 @@ class SearchEventBuilder:
             # intent dataset
             "manual_intent_label":    None,
             "manual_relevance_label": None,
-            # extra
-            "extra": obs.get("extra") or {},
+            # extra — RIS feature store
+            "extra": merged_extra,
         }
         payload.update(_extract_cost(fw_context))
         return payload

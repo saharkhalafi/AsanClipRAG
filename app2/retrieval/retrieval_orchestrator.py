@@ -75,9 +75,9 @@ class RetrievalOrchestrator:
         self,
         vector_results: list[dict[str, Any]],
         bm25_results: list[dict[str, Any]],
-        bm25_rescue_limit: int = 5,
+        bm25_rescue_limit: int = 12,
     ) -> list[dict[str, Any]]:
-        """Safe hybrid merge"""
+        """Hybrid merge — vector primary, BM25 rescues lexical-only hits."""
         if not vector_results and not bm25_results:
             return []
 
@@ -90,37 +90,50 @@ class RetrievalOrchestrator:
         merged: list[dict[str, Any]] = []
         seen_ids = set()
 
-        # Primary vector + BM25 overlap boost
         for r in normalized_vec:
             doc_id = r.get("id")
+            if doc_id is None:
+                continue
             seen_ids.add(doc_id)
             vector_score = float(r.get("vector_score", 0.0))
-            bm25_score = float(bm25_map.get(doc_id, {}).get("bm25_score", 0.0)) / max_bm25
-            final_score = (0.92 * vector_score) + (0.08 * bm25_score)
+            raw_bm25 = float(bm25_map.get(doc_id, {}).get("bm25_score", 0.0))
+            bm25_norm = raw_bm25 / max_bm25
+            lexical_score = bm25_norm
+            final_score = (0.72 * vector_score) + (0.28 * bm25_norm)
             merged.append({
                 **r,
                 "vector_score": vector_score,
-                "bm25_score": bm25_score,
+                "bm25_score": raw_bm25,
+                "lexical_score": lexical_score,
                 "final_score": final_score,
                 "source": r.get("source", "vector"),
             })
 
-        # BM25-only rescue set
         bm25_only = [r for r in normalized_bm25 if r.get("id") not in seen_ids]
         bm25_only.sort(key=lambda x: x.get("bm25_score", 0.0), reverse=True)
 
         for r in bm25_only[:bm25_rescue_limit]:
-            bm25_score = float(r.get("bm25_score", 0.0)) / max_bm25
+            raw_bm25 = float(r.get("bm25_score", 0.0))
+            bm25_norm = raw_bm25 / max_bm25
             merged.append({
                 **r,
                 "vector_score": 0.0,
-                "bm25_score": bm25_score,
-                "final_score": 0.25 * bm25_score,
+                "bm25_score": raw_bm25,
+                "lexical_score": bm25_norm,
+                "final_score": 0.40 * bm25_norm,
                 "source": "bm25",
             })
 
         merged.sort(key=lambda x: x.get("final_score", 0.0), reverse=True)
         return merged
+
+    @staticmethod
+    def _lexical_signal(bm25_results: list[dict[str, Any]]) -> dict[str, float]:
+        if not bm25_results:
+            return {"top_score": 0.0}
+        top = max(float(r.get("bm25_score", 0.0)) for r in bm25_results)
+        # Normalize ts_rank / ILIKE scores into router-friendly 0..1 range
+        return {"top_score": min(1.0, top / 2.0) if top > 1.0 else top}
 
     # -------------------------------------------------
     # PARALLEL MODE EXECUTION
@@ -138,12 +151,12 @@ class RetrievalOrchestrator:
                 self.vector_search.search,
                 query_vector=query_vector,
                 candidate_ids=candidate_ids,
-                limit=50,
+                limit=80,
             )
             future_bm25 = executor.submit(
                 self.bm25_search.search,
                 query=query,
-                limit=50,
+                limit=80,
                 filters=filters,
                 candidate_ids=candidate_ids,
             )
@@ -207,11 +220,16 @@ class RetrievalOrchestrator:
 
             mode_elapsed = time.monotonic() - mode_started
 
+            lexical_signal = self._lexical_signal(
+                parallel_results["bm25"] if current_mode in ("vector", "hybrid") else results
+            )
+
             quality = self.rqm.compute(results=results, query=query)
             route = self.router.route(
                 query=query,
                 retrieval_quality=quality,
                 filters=filters,
+                lexical_signal=lexical_signal,
             )
 
             score = float(quality.get("retrieval_quality", 0.0))

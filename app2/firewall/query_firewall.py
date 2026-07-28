@@ -114,13 +114,17 @@ class QueryFirewall:
 
         if not relevance.get("ok", True):
             reason = relevance.get("reason", "low_relevance")
-            if reason in ("no_similar_content", "embedding_failed"):
-                raise ValidationError(reason)
+            raise ValidationError(
+                reason,
+                context={"signals": signals, "normalized_query": query},
+            )
 
         return {
             "allowed": True,
             "reason": "ok",
             "fallback": fallback,
             "semantic_score": semantic_score,
+            "normalized_query": query,
+            "query_vector": relevance.get("query_vector"),
             "signals": signals,
         }

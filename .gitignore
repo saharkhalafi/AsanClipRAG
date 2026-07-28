@@ -124,3 +124,17 @@ secrets/
 *.pem
 credentials.json
 
+
+# Large data / dumps
+*.sql
+products.sql
+golden_dataset.json
+Sale1404.sql
+*.csv
+embedding_cache.json
+body.json
+
+# Evaluation outputs
+app2/evaluation/results/
+evaluation/results/
+

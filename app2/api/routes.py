@@ -12,13 +12,14 @@ from uuid import uuid4
 from app2.analytics.event_builder import SearchEventBuilder
 from app2.analytics.logger import ObservabilityLogger
 from app2.db.session import get_db
-from app2.embedding.embedding_service import EmbeddingService
+from app2.embedding.embedding_service import get_embedding_service
 
 # Exception Handling
 from app2.exceptions import ValidationError
 from app2.firewall.query_firewall import QueryFirewall
-from app2.firewall.semantic_intent import SemanticIntentDetector
+from app2.firewall.semantic_intent import SemanticIntentDetector, _normalize as semantic_normalize
 from app2.metadata.metadata_loader import MetadataLoader
+from app2.services.query_preprocessor import QueryPreprocessor
 from app2.services.search_orchestrator import SearchOrchestrator
 from fastapi import APIRouter, Depends, Header, Request
 from pydantic import BaseModel
@@ -32,11 +33,14 @@ api_logger = logging.getLogger("app2.api")
 # Rate Limiter
 limiter = Limiter(key_func=get_remote_address)
 
+_query_preprocessor = QueryPreprocessor()
+
 
 # ── Request schema ─────────────────────────────────────────────────────────────
 
 class SearchRequest(BaseModel):
     query: str
+    top_k: int = 5
 
 
 # ── Shared factory ─────────────────────────────────────────────────────────────
@@ -51,7 +55,7 @@ def _build_firewall(meta: dict, db: Session) -> QueryFirewall:
         },
         sparse_fields=["occasions", "platforms", "product_types"],
         fallback_label_field="product_names",
-        embedder=EmbeddingService(),
+        embedder=get_embedding_service(),
         db=db
     )
     return QueryFirewall(db=db, semantic_detector=semantic_detector)
@@ -86,16 +90,21 @@ async def search(
     x_user_id: str | None = Header(default=None, alias="X-User-Id"),
 ):
     request_id = uuid4().hex
-    query      = req.query
+    query_raw  = req.query
+    query      = query_raw
+    fw_latency = 0.0
     obs_logger = ObservabilityLogger()
 
     t_total = perf_counter()
 
     try:
-        # ── 0. Metadata — ONE DB round-trip ────────────────────
+        # ── 0. Preprocess once (shared by firewall + search + embed cache) ──
+        query = _query_preprocessor.normalize(query_raw)
+
+        # ── 1. Metadata (in-memory TTL cache) ────────────────────
         meta = MetadataLoader(db).load()
 
-        # ── 1. Firewall (always runs) ──────────────────────────────────────────────
+        # ── 2. Firewall (always runs) ──────────────────────────────────────────────
         t_fw      = perf_counter()
         firewall  = _build_firewall(meta=meta, db=db)
         fw_result = firewall.check(query)
@@ -106,7 +115,7 @@ async def search(
             total_latency = round((perf_counter() - t_total) * 1000, 2)
 
             payload = SearchEventBuilder.from_firewall_block(
-                query_raw     = query,
+                query_raw     = query_raw,
                 fw_context    = fw_result,
                 request_id    = request_id,
                 fw_latency    = fw_latency,
@@ -121,13 +130,20 @@ async def search(
                 "mode":    "blocked_by_firewall",
                 "reason":  fw_result.get("reason", "blocked"),
                 "signals": fw_result.get("signals", {}),
-                "query":   query,
+                "query":   query_raw,
                 "results": [],
             }
 
         # ── 2b. Search path ────────────────────────────────────────────────────────
+        # Match embed cache key used by firewall relevance (semantic normalize).
+        search_query = semantic_normalize(fw_result.get("normalized_query", query))
         orchestrator  = SearchOrchestrator(db=db, meta=meta)
-        result        = orchestrator.search(query)
+        result        = orchestrator.search(
+            query_raw,
+            normalized_query=search_query,
+            query_vector=fw_result.get("query_vector"),
+            top_k=req.top_k,
+        )
         total_latency = round((perf_counter() - t_total) * 1000, 2)
 
         payload = SearchEventBuilder.from_result(
@@ -151,14 +167,19 @@ async def search(
         }
 
     except ValidationError as e:
-        # لاگ ValidationError هم ذخیره شود
         total_latency = round((perf_counter() - t_total) * 1000, 2)
+        ctx = getattr(e, "context", {}) or {}
 
         payload = SearchEventBuilder.from_firewall_block(
-            query_raw     = query,
-            fw_context    = {"reason": str(e), "allowed": False},
+            query_raw     = query_raw,
+            fw_context    = {
+                "reason": str(e),
+                "allowed": False,
+                "signals": ctx.get("signals", {}),
+                "normalized_query": ctx.get("normalized_query", query),
+            },
             request_id    = request_id,
-            fw_latency    = 0,
+            fw_latency    = fw_latency,
             total_latency = total_latency,
             session_id    = x_session_id,
             user_id       = x_user_id,

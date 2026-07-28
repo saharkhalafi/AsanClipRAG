@@ -1,18 +1,30 @@
 # app2/retrieval/vector_search.py
+import logging
 from typing import Any
 
 import numpy as np
-from app2.exceptions import DatabaseError, ValidationError  # ← جدید
-from app2.retrieval.faiss_index import FaissIndex
+from app2.config.constants import EMBEDDING_DIMENSION
+from app2.exceptions import DatabaseError, ValidationError
+from app2.retrieval.faiss_index import get_faiss_index
 from sqlalchemy import text
+
+logger = logging.getLogger("app2.retrieval.vector")
 
 
 class VectorSearchService:
 
     def __init__(self, db_session):
         self.db = db_session
-        self.faiss = FaissIndex(dimension=768)
+        self.faiss = get_faiss_index(dimension=EMBEDDING_DIMENSION)
         self.use_faiss = True
+        if self.faiss.index is not None:
+            logger.debug(
+                "Using FAISS index with %d vectors (dim=%d)",
+                self.faiss.index.ntotal,
+                EMBEDDING_DIMENSION,
+            )
+        else:
+            logger.warning("FAISS index unavailable — falling back to pgvector")
 
     # =====================================================
     # VECTOR SEARCH (PRODUCTION READY)
@@ -33,7 +45,7 @@ class VectorSearchService:
         try:
             query_vector = np.asarray(query_vector, dtype=np.float32).reshape(1, -1)
         except Exception as e:
-            raise ValidationError("Invalid query vector") from e   # ← تغییر
+            raise ValidationError("Invalid query vector") from e
 
         params = dict(params or {})
 
@@ -42,13 +54,17 @@ class VectorSearchService:
         # -----------------------------
         if self.use_faiss and self.faiss.index is not None:
             try:
-                results = self.faiss.search(query_vector[0], k=limit * 2)
                 if candidate_ids:
-                    results = [r for r in results if r[0] in candidate_ids]
-                return self._format_results(results, mode)
-            except Exception:
-                # fallback به PGVector
-                pass
+                    k = min(500, max(limit * 4, len(candidate_ids) * 3))
+                else:
+                    k = min(500, limit * 3)
+                results = self.faiss.search(query_vector[0], k=k)
+                if candidate_ids:
+                    candidate_set = set(candidate_ids)
+                    results = [r for r in results if r[0] in candidate_set]
+                return self._hydrate_faiss_results(results, mode, limit)
+            except Exception as exc:
+                logger.warning("FAISS search failed, using pgvector: %s", exc)
 
         # -----------------------------
         # 2. FALLBACK: PGVector
@@ -90,7 +106,7 @@ class VectorSearchService:
         try:
             rows = self.db.execute(sql, params).fetchall()
         except Exception as e:
-            raise DatabaseError("Vector search query failed") from e   # ← تغییر
+            raise DatabaseError("Vector search query failed") from e
 
         if not rows:
             return []
@@ -118,16 +134,63 @@ class VectorSearchService:
 
         return results
 
-    def _format_results(self, faiss_results: list[tuple], mode: str) -> list[dict]:
+    def _hydrate_faiss_results(
+        self,
+        faiss_results: list[tuple[int, float]],
+        mode: str,
+        limit: int,
+    ) -> list[dict[str, Any]]:
+        """Batch-load product rows for FAISS hits (preserves FAISS ranking)."""
         if not faiss_results:
             return []
 
-        results = []
+        score_map = {pid: float(sim) for pid, sim in faiss_results}
+        ids = list(score_map.keys())
+
+        sql = text("""
+            SELECT
+                id,
+                name,
+                short_description,
+                description,
+                rag_text,
+                product_type,
+                occasion,
+                platform
+            FROM asanclipproducts
+            WHERE id = ANY(:ids)
+              AND tag_status = 'done'
+        """)
+
+        try:
+            rows = self.db.execute(sql, {"ids": ids}).fetchall()
+        except Exception as e:
+            raise DatabaseError("FAISS hydration query failed") from e
+
+        row_map = {row._mapping["id"]: row._mapping for row in rows}
+
+        results: list[dict[str, Any]] = []
         for product_id, similarity in faiss_results:
+            row = row_map.get(product_id)
+            if row is None:
+                continue
+
+            distance = max(0.0, 1.0 - similarity)
             results.append({
-                "id": product_id,
-                "vector_score": float(similarity),
+                "id": row["id"],
+                "name": row["name"],
+                "short_description": row.get("short_description"),
+                "description": row.get("description"),
+                "rag_text": row.get("rag_text"),
+                "product_type": row.get("product_type"),
+                "occasion": row.get("occasion"),
+                "platform": row.get("platform"),
+                "distance": distance,
+                "vector_score": similarity,
                 "source": "vector",
                 "mode": mode,
             })
+            if len(results) >= limit:
+                break
+
         return results

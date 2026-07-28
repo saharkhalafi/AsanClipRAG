@@ -34,6 +34,10 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from app2.bootstrap import warm_application
+
+    settings.setup()
+    warm_application()
     logging.info("🚀 AsanClip RAG System started successfully")
     yield
     logging.info("🛑 AsanClip RAG System shutting down")

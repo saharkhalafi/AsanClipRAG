@@ -1,6 +1,7 @@
 import re
 from typing import Any
 
+from app2.utils.query_synonyms import expand_query, normalize_variants
 from sqlalchemy import text
 
 
@@ -60,6 +61,7 @@ class MetadataSearchService:
 
         semantic = semantic or {}
         semantic_matches = semantic.get("matches", {}) or {}
+        query = expand_query(normalize_variants(query))
         tokens = self._extract_tokens(query)
 
         # -------------------------------------------------

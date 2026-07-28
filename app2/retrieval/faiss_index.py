@@ -4,9 +4,32 @@ from pathlib import Path
 import faiss
 import numpy as np
 
+from app2.config.constants import EMBEDDING_DIMENSION, FAISS_INDEX_PATH
+
+_shared_faiss: "FaissIndex | None" = None
+
+
+def get_faiss_index(
+    dimension: int | None = None,
+    index_path: str | None = None,
+) -> "FaissIndex":
+    """Return a process-wide FAISS index (loaded once)."""
+    global _shared_faiss
+    if _shared_faiss is None:
+        _shared_faiss = FaissIndex(
+            dimension=dimension or EMBEDDING_DIMENSION,
+            index_path=index_path or FAISS_INDEX_PATH,
+        )
+        _shared_faiss.load_index()
+    return _shared_faiss
+
 
 class FaissIndex:
-    def __init__(self, dimension: int = 3072, index_path: str = "indexes/faiss.index"):
+    def __init__(
+        self,
+        dimension: int = EMBEDDING_DIMENSION,
+        index_path: str = FAISS_INDEX_PATH,
+    ):
         self.dimension = dimension
         self.index_path = Path(index_path)
         self.index_path.parent.mkdir(parents=True, exist_ok=True)

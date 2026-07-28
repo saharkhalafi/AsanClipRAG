@@ -1,6 +1,7 @@
 # app2/monitoring/health.py
 import os
 
+from app2.bootstrap import faiss_index_status
 from app2.core.settings import get_settings
 from app2.db.session import get_db
 from fastapi import APIRouter, Depends
@@ -54,6 +55,7 @@ async def readiness_check(db: Session = Depends(get_db)):
                 else None
             ),
             "cache": "enabled" if settings.ENABLE_CACHE else "disabled",
+            "faiss": faiss_index_status(),
             "hint": (
                 "Compare retrieval_logs_count with your SQL client. "
                 "Docker Postgres is exposed on host port 5433, not 5432."

@@ -5,7 +5,8 @@ import os
 
 import numpy as np
 import pandas as pd
-from app2.retrieval.faiss_index import FaissIndex  # ← استفاده از کلاس جدید
+from app2.config.constants import EMBEDDING_DIMENSION, FAISS_INDEX_PATH
+from app2.retrieval.faiss_index import FaissIndex
 from sqlalchemy import create_engine, text
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -60,7 +61,7 @@ embeddings = np.vstack(vectors)
 print(f"Building FAISS index with {len(ids)} vectors...")
 
 # استفاده از کلاس جدید
-faiss_index = FaissIndex(dimension=embeddings.shape[1])
+faiss_index = FaissIndex(dimension=EMBEDDING_DIMENSION, index_path=FAISS_INDEX_PATH)
 faiss_index.build_index(embeddings, ids)
 
 print("✅ FAISS index built successfully!")

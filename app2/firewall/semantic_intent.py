@@ -231,24 +231,36 @@ class SemanticIntentDetector:
 
         try:
             self.embedding_calls += 1
-            query_vector = self.embedder.embed(q).tolist()
+            query_vector = np.asarray(self.embedder.embed(q), dtype=np.float32)
         except Exception:
             return {"ok": True, "reason": "embedding_failed", "score": 0.5}
 
-        result = self.db.execute(text("""
-            SELECT id, name, short_description,
-                   (embedding_vector <=> CAST(:vec AS vector)) as distance
-            FROM asanclipproducts
-            WHERE tag_status = 'done'
-            ORDER BY embedding_vector <=> CAST(:vec AS vector)
-            LIMIT 8
-        """), {"vec": query_vector}).fetchall()
+        sims: list[float] = []
+        try:
+            from app2.retrieval.faiss_index import get_faiss_index
 
-        if not result:
-            return {"ok": False, "reason": "no_similar_content", "score": 0.0}
+            faiss_index = get_faiss_index()
+            if faiss_index.index is not None:
+                faiss_hits = faiss_index.search(query_vector, k=8)
+                sims = [float(sim) for _, sim in faiss_hits]
+        except Exception:
+            sims = []
 
-        distances = [r.distance for r in result]
-        sims = [1.0 - d for d in distances]
+        if not sims:
+            result = self.db.execute(text("""
+                SELECT id, name, short_description,
+                       (embedding_vector <=> CAST(:vec AS vector)) as distance
+                FROM asanclipproducts
+                WHERE tag_status = 'done'
+                ORDER BY embedding_vector <=> CAST(:vec AS vector)
+                LIMIT 8
+            """), {"vec": query_vector.tolist()}).fetchall()
+
+            if not result:
+                return {"ok": False, "reason": "no_similar_content", "score": 0.0}
+
+            distances = [r.distance for r in result]
+            sims = [1.0 - d for d in distances]
 
         avg_sim = sum(sims) / len(sims)
         top1_sim = sims[0]
@@ -277,7 +289,8 @@ class SemanticIntentDetector:
                 "reason": "low_semantic_relevance_or_chat_like",
                 "final_score": round(final_score, 4),
                 "top1_sim": round(top1_sim, 4),
-                "avg_sim": round(avg_sim, 4)
+                "avg_sim": round(avg_sim, 4),
+                "query_vector": query_vector.tolist(),
             }
 
         return {
@@ -285,5 +298,6 @@ class SemanticIntentDetector:
             "reason": "ok",
             "final_score": round(final_score, 4),
             "top1_sim": round(top1_sim, 4),
-            "avg_sim": round(avg_sim, 4)
+            "avg_sim": round(avg_sim, 4),
+            "query_vector": query_vector.tolist(),
         }

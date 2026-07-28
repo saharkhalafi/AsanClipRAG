@@ -107,10 +107,19 @@ class ObservabilityLogger:
                 )
                 return {"ok": False, "error": "db_write_failed"}
 
+            extra = data.get("extra") or {}
             self.logger.info(
-                "Logged search event %s for request %s",
-                row.id,
+                "search_intent request_id=%s blocked=%s mode=%s semantic_score=%s "
+                "top1_vector_sim=%s query_len=%s tokens=%s weak_results=%s reason=%s",
                 data.get("request_id"),
+                data.get("blocked"),
+                data.get("mode"),
+                data.get("semantic_best_score"),
+                extra.get("top1_vector_sim"),
+                data.get("query_length"),
+                data.get("token_count"),
+                extra.get("results_looked_weak"),
+                data.get("block_reason") or data.get("firewall_reason") or data.get("mode"),
             )
             return {"ok": True, "id": row.id}
         except Exception:
