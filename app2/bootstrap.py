@@ -8,7 +8,6 @@ import os
 from app2.config.constants import EMBEDDING_DIMENSION, FAISS_INDEX_PATH
 from app2.db.session import SessionLocal
 from app2.metadata.metadata_loader import MetadataLoader
-from app2.retrieval.faiss_index import get_faiss_index
 
 logger = logging.getLogger("app2.bootstrap")
 
@@ -40,6 +39,8 @@ def _warm_metadata() -> None:
 
 def _warm_faiss() -> None:
     try:
+        from app2.retrieval.faiss_index import get_faiss_index
+
         index = get_faiss_index()
         if index.index is None:
             logger.warning(
@@ -74,6 +75,8 @@ def _warm_embedding_client() -> None:
 def faiss_index_status() -> dict:
     """Lightweight health info for /ready."""
     try:
+        from app2.retrieval.faiss_index import get_faiss_index
+
         index = get_faiss_index()
         if index.index is None:
             return {"loaded": False, "path": FAISS_INDEX_PATH, "vectors": 0}

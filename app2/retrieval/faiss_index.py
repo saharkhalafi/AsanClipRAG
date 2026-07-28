@@ -1,11 +1,17 @@
 import pickle
 from pathlib import Path
+from typing import Any
 
-import faiss
 import numpy as np
 from app2.config.constants import EMBEDDING_DIMENSION, FAISS_INDEX_PATH
 
 _shared_faiss: "FaissIndex | None" = None
+
+
+def _faiss_module():
+    import faiss
+
+    return faiss
 
 
 def get_faiss_index(
@@ -34,7 +40,7 @@ class FaissIndex:
         self.index_path = Path(index_path)
         self.index_path.parent.mkdir(parents=True, exist_ok=True)
 
-        self.index: faiss.Index | None = None
+        self.index: Any | None = None
         self.id_map: dict[int, int] = {}
         self.reverse_map: dict[int, int] = {}
 
@@ -51,6 +57,8 @@ class FaissIndex:
             raise ValueError(
                 f"Embedding dim mismatch: got {embeddings.shape[1]}, expected {self.dimension}"
             )
+
+        faiss = _faiss_module()
 
         # normalize برای cosine similarity
         faiss.normalize_L2(embeddings)
@@ -76,6 +84,7 @@ class FaissIndex:
     def load_index(self):
         """Load index from disk"""
         if self.index_path.exists():
+            faiss = _faiss_module()
             self.index = faiss.read_index(str(self.index_path))
 
             with open(self.index_path.with_suffix(".pkl"), "rb") as f:
@@ -104,6 +113,8 @@ class FaissIndex:
             raise ValueError(
                 f"Query dim mismatch: got {query_vector.shape[1]}, expected {self.dimension}"
             )
+
+        faiss = _faiss_module()
 
         # normalize برای cosine similarity
         faiss.normalize_L2(query_vector)

@@ -1,7 +1,6 @@
 # app2/monitoring/health.py
 import os
 
-from app2.bootstrap import faiss_index_status
 from app2.core.settings import get_settings
 from app2.db.session import get_db
 from fastapi import APIRouter, Depends
@@ -41,6 +40,8 @@ async def readiness_check(db: Session = Depends(get_db)):
         ).mappings().one()
 
         server_addr = db.execute(text("SELECT inet_server_addr()")).scalar()
+
+        from app2.bootstrap import faiss_index_status
 
         return {
             "status": "ready",
