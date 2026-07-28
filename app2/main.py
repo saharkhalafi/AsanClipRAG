@@ -2,6 +2,11 @@
 import logging
 from contextlib import asynccontextmanager
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
 from app2.api.routes import router as search_router
 
 # ======================
@@ -21,10 +26,6 @@ from app2.middleware.timing import TimingMiddleware
 
 # Health
 from app2.monitoring.health import router as health_router
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 # ======================
 # Settings & Lifespan

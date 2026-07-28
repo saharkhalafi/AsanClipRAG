@@ -13,7 +13,6 @@ from app2.cache.cache_service import CacheService
 from app2.config.constants import (
     CANDIDATE_POOL_LIMIT,
     DEFAULT_TOP_K,
-    INTERNAL_RANK_TOP_K,
     RESPONSE_TOP_K,
     USER_CAPTION_LIMIT,
     USER_RESPONSE_TOP_K,

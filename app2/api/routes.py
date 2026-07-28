@@ -17,7 +17,8 @@ from app2.embedding.embedding_service import get_embedding_service
 # Exception Handling
 from app2.exceptions import ValidationError
 from app2.firewall.query_firewall import QueryFirewall
-from app2.firewall.semantic_intent import SemanticIntentDetector, _normalize as semantic_normalize
+from app2.firewall.semantic_intent import SemanticIntentDetector
+from app2.firewall.semantic_intent import _normalize as semantic_normalize
 from app2.metadata.metadata_loader import MetadataLoader
 from app2.services.query_preprocessor import QueryPreprocessor
 from app2.services.search_orchestrator import SearchOrchestrator

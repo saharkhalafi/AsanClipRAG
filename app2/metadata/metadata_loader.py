@@ -1,8 +1,7 @@
 import time
 
-from sqlalchemy import text
-
 from app2.config.constants import METADATA_CACHE_TTL_SECONDS
+from sqlalchemy import text
 
 
 class MetadataLoader:

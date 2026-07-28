@@ -1,6 +1,7 @@
+import os
+
 APP_NAME = "AsanClip RAG"
 VERSION = "1.0.0"
-import os
 
 # Cache
 CACHE_TTL_SEARCH = 3600

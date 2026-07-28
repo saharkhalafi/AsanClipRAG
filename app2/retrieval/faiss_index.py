@@ -3,7 +3,6 @@ from pathlib import Path
 
 import faiss
 import numpy as np
-
 from app2.config.constants import EMBEDDING_DIMENSION, FAISS_INDEX_PATH
 
 _shared_faiss: "FaissIndex | None" = None
@@ -23,8 +22,6 @@ def get_faiss_index(
         _shared_faiss.load_index()
     return _shared_faiss
 
-import faiss
-import numpy as np
 
 
 class FaissIndex:
