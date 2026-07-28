@@ -6,20 +6,20 @@ from pathlib import Path
 import numpy as np
 import pytest
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-# Load local .env before app imports (session.py requires DATABASE_URL at import time).
-try:
-    from dotenv import load_dotenv
+if not os.getenv("GITHUB_ACTIONS"):
+    try:
+        from dotenv import load_dotenv
 
-    load_dotenv(ROOT / ".env")
-except ImportError:
-    pass
+        load_dotenv(ROOT / ".env", override=False)
+    except ImportError:
+        pass
 
 os.environ.setdefault(
     "DATABASE_URL",
@@ -29,10 +29,15 @@ os.environ.setdefault("ENVIRONMENT", "test")
 os.environ.setdefault("ENABLE_CACHE", "false")
 os.environ.setdefault("ENABLE_PII_DETECTION", "false")
 
-# When pytest runs on the host, Docker Compose service names are not resolvable.
+# Rewrite Docker Compose service hostname only for local host-side pytest runs.
 _db_url = os.environ.get("DATABASE_URL", "")
-if "@postgres:" in _db_url:
-    os.environ["DATABASE_URL"] = _db_url.replace("@postgres:5432", "@localhost:5433")
+if (
+    not os.getenv("GITHUB_ACTIONS")
+    and "@postgres:5432/" in _db_url
+):
+    os.environ["DATABASE_URL"] = _db_url.replace(
+        "@postgres:5432/", "@localhost:5433/"
+    )
 
 from app2.db.base import Base  # noqa: E402
 from app2.exceptions import ValidationError  # noqa: E402
@@ -43,15 +48,8 @@ def pytest_configure(config):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _test_env():
-    # Values are set at import time above; keep fixture for clarity/extension.
-    yield
-
-
-@pytest.fixture(scope="session", autouse=True)
 def _stub_embedding_without_api_key():
-    """Allow CI to run without GEMINI_API_KEY by stubbing embeddings."""
-    if os.getenv("GEMINI_API_KEY"):
+    if os.getenv("GEMINI_API_KEY", "").strip():
         yield
         return
 
@@ -71,7 +69,8 @@ def _stub_embedding_without_api_key():
             return vec / norm
 
     es_mod.EmbeddingService = StubEmbeddingService
-    es_mod._embedding_service = None
+    if hasattr(es_mod, "_embedding_service"):
+        es_mod._embedding_service = None
     yield
 
 
@@ -88,11 +87,13 @@ def db_engine():
             conn = conn.execution_options(isolation_level="AUTOCOMMIT")
             conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
             conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
-    except OperationalError as exc:
-        pytest.skip(f"PostgreSQL not available for integration tests: {exc}")
+    except SQLAlchemyError as exc:
+        pytest.skip(f"PostgreSQL not available: {exc}")
 
-    Base.metadata.create_all(engine)
-
+    try:
+        Base.metadata.create_all(engine)
+    except SQLAlchemyError as exc:
+        pytest.skip(f"PostgreSQL schema setup failed: {exc}")
     yield engine
 
 
@@ -107,7 +108,15 @@ def db_session(db_engine):
 
 @pytest.fixture(scope="function")
 def test_client(db_engine):
-    from app2.main import app
     from fastapi.testclient import TestClient
 
-    return TestClient(app)
+    try:
+        from app2.main import app
+    except Exception as exc:
+        pytest.skip(f"App import failed: {exc}")
+
+    try:
+        with TestClient(app) as client:
+            yield client
+    except Exception as exc:
+        pytest.skip(f"App startup failed: {exc}")

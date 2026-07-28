@@ -40,9 +40,11 @@ def test_abuse_detector_evaluation():
                 fn += 1
 
         # ---- reason correctness (secondary metric)
-        if not expected_ok:
-            if result.get("reason") != expected_reason:
-                reason_errors += 1
+        if (
+            not expected_ok
+            and result.get("reason") != expected_reason
+        ):
+            reason_errors += 1
 
     accuracy = correct / total
     fp_rate = fp / total

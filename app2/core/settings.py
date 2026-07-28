@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Literal, Optional
+from typing import Literal
 
 from app2.config.logging import setup_logging
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -25,13 +25,10 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
 
-    # Sentry
-    SENTRY_DSN: Optional[str] = None
-
     def setup(self):
         setup_logging(self.LOG_LEVEL)
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     return Settings()

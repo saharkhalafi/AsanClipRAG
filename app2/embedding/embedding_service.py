@@ -6,11 +6,18 @@ import time
 from typing import Optional
 
 import numpy as np
-from app2.cache.cache_service import CacheService
-from app2.exceptions import DatabaseError, ValidationError
 from google import genai
 from httpx import ConnectError, ConnectTimeout
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
+from app2.exceptions import DatabaseError, ValidationError
+
+from ..cache.cache_service import CacheService
 
 logger = logging.getLogger("app2.embedding")
 
@@ -94,11 +101,11 @@ class EmbeddingService:
             ) from e
 
         except Exception as e:
-            logger.error(f"Embedding failed: {str(e)} | text: {text[:100]}...")
-            raise DatabaseError(f"Embedding service failed: {str(e)}") from e
+            logger.error(f"Embedding failed: {e!s} | text: {text[:100]}...")
+            raise DatabaseError(f"Embedding service failed: {e!s}") from e
 
 
-# Singleton — lazy init so imports work without GEMINI_API_KEY (e.g. CI unit tests)
+# Lazy singleton — safe to import without GEMINI_API_KEY (CI / unit tests)
 _embedding_service: Optional[EmbeddingService] = None
 
 

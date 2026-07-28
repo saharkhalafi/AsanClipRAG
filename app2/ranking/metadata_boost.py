@@ -1,6 +1,6 @@
 # app2/ranking/metadata_boost.py
 
-from typing import Any, Dict, List
+from typing import Any
 
 
 class MetadataBooster:
@@ -15,91 +15,79 @@ class MetadataBooster:
         self.occasions = set(occasions or [])
         self.platforms = set(platforms or [])
 
-    # -------------------------------------------------
-    # MAIN FUNCTION: re-rank results
-    # -------------------------------------------------
+    @staticmethod
+    def _field_matches(filter_val: str, row_val: str) -> bool:
+        if not filter_val or not row_val:
+            return False
+        f = str(filter_val).strip().lower()
+        r = str(row_val).strip().lower()
+        if f == r:
+            return True
+        return f in r or r in f
+
     def boost(
         self,
-        results: List[Dict[str, Any]],
-        filters: Dict[str, Any],
+        results: list[dict[str, Any]],
+        filters: dict[str, Any],
         query: str = ""
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
 
         boosted = []
+        query_lower = (query or "").lower()
 
         for r in results:
 
             base_score = self._get_base_score(r)
-
-            bonus = self._compute_bonus(r, filters, query)
+            bonus = self._compute_bonus(r, filters, query_lower)
 
             r["final_score"] = base_score + bonus
             r["metadata_boost"] = bonus
 
             boosted.append(r)
 
-        # sort by final score
         boosted.sort(key=lambda x: x["final_score"], reverse=True)
 
         return boosted
 
-    # -------------------------------------------------
-    # base score from vector + lexical
-    # -------------------------------------------------
-    def _get_base_score(self, r: Dict[str, Any]) -> float:
+    def _get_base_score(self, r: dict[str, Any]) -> float:
 
-        # distance → similarity
+        if r.get("vector_score") is not None:
+            return float(r["vector_score"])
+
         if r.get("distance") is not None:
-            vector_score = 1 / (1 + r["distance"])
-        else:
-            vector_score = 0.0
+            return max(0.0, 1.0 - float(r["distance"]))
 
-        # lexical fallback gets small base
-        if r.get("source") == "lexical":
-            vector_score = max(vector_score, 0.2)
+        if r.get("bm25_score") is not None:
+            return min(0.85, float(r["bm25_score"]))
 
-        return vector_score
+        if r.get("source") in {"bm25", "lexical"}:
+            return 0.25
 
-    # -------------------------------------------------
-    # metadata boost logic
-    # -------------------------------------------------
+        return 0.0
+
     def _compute_bonus(
         self,
-        r: Dict[str, Any],
-        filters: Dict[str, Any],
+        r: dict[str, Any],
+        filters: dict[str, Any],
         query: str
     ) -> float:
 
         bonus = 0.0
 
-        # -------------------------
-        # product_type match
-        # -------------------------
         if filters.get("product_type") and r.get("product_type"):
-
-            if r["product_type"] in filters["product_type"]:
+            if self._field_matches(filters["product_type"], r["product_type"]):
                 bonus += 0.15
 
-        # -------------------------
-        # occasion match
-        # -------------------------
         if filters.get("occasion") and r.get("occasion"):
+            if self._field_matches(filters["occasion"], r["occasion"]):
+                bonus += 0.18
 
-            if r["occasion"] in filters["occasion"]:
-                bonus += 0.15
-
-        # -------------------------
-        # platform match
-        # -------------------------
         if filters.get("platform") and r.get("platform"):
-
-            if r["platform"] == filters["platform"]:
+            if self._field_matches(filters["platform"], r["platform"]):
                 bonus += 0.10
 
-        # -------------------------
-        # query heuristic boost (VERY useful for Persian)
-        # -------------------------
-        if r.get("name") and r["name"] in query:
+        name_value = str(r.get("name") or "").lower().strip()
+        if name_value and name_value in query:
             bonus += 0.05
 
         return bonus

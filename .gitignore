@@ -84,8 +84,10 @@ vector_index/
 logs/
 *.log
 data/
-cache/
+/cache/
 temp/
+!app2/cache/
+!app2/cache/**
 indexes/
 
 # Testing
@@ -126,4 +128,17 @@ secrets/
 *.key
 *.pem
 credentials.json
+
+
+# Large data / dumps
+*.sql
+products.sql
+golden_dataset.json
+Sale1404.sql
+embedding_cache.json
+body.json
+
+# Evaluation outputs
+app2/evaluation/results/
+evaluation/results/
 

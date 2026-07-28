@@ -2,10 +2,11 @@
 import logging
 from contextlib import asynccontextmanager
 
-# ======================
-# Sentry
-# ======================
-import sentry_sdk
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
 from app2.api.routes import router as search_router
 
 # ======================
@@ -25,12 +26,6 @@ from app2.middleware.timing import TimingMiddleware
 
 # Health
 from app2.monitoring.health import router as health_router
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from sentry_sdk.integrations.fastapi import FastApiIntegration
-from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 # ======================
 # Settings & Lifespan
@@ -38,28 +33,12 @@ from slowapi.util import get_remote_address
 settings = get_settings()
 
 
-# ======================
-# Sentry Init
-# ======================
-if settings.SENTRY_DSN:
-    sentry_sdk.init(
-        dsn=settings.SENTRY_DSN,
-        integrations=[
-            FastApiIntegration(),
-            SqlalchemyIntegration(),
-        ],
-        traces_sample_rate=0.2,          # 20% of requests for performance monitoring
-        profiles_sample_rate=0.1,
-        environment=settings.ENVIRONMENT,
-        send_default_pii=False,          # Don't send sensitive user data
-    )
-    logging.info("✅ Sentry initialized")
-else:
-    logging.info("ℹ️ Sentry DSN not set — skipping Sentry")
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from app2.bootstrap import warm_application
+
+    settings.setup()
+    warm_application()
     logging.info("🚀 AsanClip RAG System started successfully")
     yield
     logging.info("🛑 AsanClip RAG System shutting down")
@@ -120,6 +99,8 @@ async def root():
         "version": "1.0.0",
         "docs": "/docs"
     }
+
+
 # ======================
 # Run
 # ======================

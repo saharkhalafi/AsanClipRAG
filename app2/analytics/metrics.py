@@ -1,14 +1,15 @@
-from typing import Any, Dict, List
+from typing import Any
+
+from sqlalchemy import func
 
 from app2.db.models import RetrievalLog
-from sqlalchemy import func
 
 
 class ObservabilityMetrics:
     def __init__(self, db):
         self.db = db
 
-    def summary(self) -> Dict[str, Any]:
+    def summary(self) -> dict[str, Any]:
         total = self.db.query(func.count(RetrievalLog.id)).scalar() or 0
         blocked = (
             self.db.query(func.count(RetrievalLog.id))
@@ -55,7 +56,7 @@ class ObservabilityMetrics:
             "fallback_rate": (fallback_count / total) if total else 0.0,
         }
 
-    def export_intent_dataset_rows(self, limit: int = 10_000) -> List[Dict[str, Any]]:
+    def export_intent_dataset_rows(self, limit: int = 10_000) -> list[dict[str, Any]]:
         rows = (
             self.db.query(RetrievalLog)
             .order_by(RetrievalLog.created_at.desc())

@@ -1,9 +1,10 @@
 # app2/exceptions/handlers.py
 import logging
 
-from app2.exceptions.errors import AppBaseError
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
+
+from app2.exceptions.errors import AppBaseError
 
 logger = logging.getLogger("app2.exceptions")
 

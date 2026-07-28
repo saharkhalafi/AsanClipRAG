@@ -2,16 +2,22 @@
 
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 from app2.builders.observability_builder import ObservabilityBuilder
 from app2.builders.response_builder import ResponseBuilder
-from app2.cache.cache_service import CacheService
+from app2.cache import CacheService
 
 # Constants
-from app2.config.constants import DEFAULT_TOP_K
-from app2.embedding.embedding_service import EmbeddingService
+from app2.config.constants import (
+    CANDIDATE_POOL_LIMIT,
+    DEFAULT_TOP_K,
+    RESPONSE_TOP_K,
+    USER_CAPTION_LIMIT,
+    USER_RESPONSE_TOP_K,
+)
+from app2.embedding.embedding_service import get_embedding_service
 
 # Centralized Exceptions
 from app2.exceptions import DatabaseError, ValidationError
@@ -30,18 +36,19 @@ from app2.services.caption_service import CaptionService
 from app2.services.query_preprocessor import QueryPreprocessor
 from app2.services.retrieval_quality import RetrievalQualityModel
 from app2.utils.filters import normalize_filters
+from app2.utils.query_synonyms import expand_query, normalize_variants
 
 
 class SearchOrchestrator:
 
-    def __init__(self, db, meta: Optional[Dict[str, Any]] = None):
+    def __init__(self, db, meta: dict[str, Any] | None = None):
         self.db = db
         self.cache = CacheService()
 
         # ----------------------------
         # CORE
         # ----------------------------
-        self.embedder = EmbeddingService()
+        self.embedder = get_embedding_service()
         self.preprocessor = QueryPreprocessor()
 
         # ----------------------------
@@ -128,8 +135,8 @@ class SearchOrchestrator:
         except Exception:
             return default
 
-    def _top_results_snapshot(self, results: List[Dict[str, Any]], limit: int = DEFAULT_TOP_K) -> List[Dict[str, Any]]:
-        snapshot: List[Dict[str, Any]] = []
+    def _top_results_snapshot(self, results: list[dict[str, Any]], limit: int = DEFAULT_TOP_K) -> list[dict[str, Any]]:
+        snapshot: list[dict[str, Any]] = []
         for r in results[:limit]:
             snapshot.append({
                 "id": r.get("id"),
@@ -145,13 +152,21 @@ class SearchOrchestrator:
     # =====================================================
     # MAIN SEARCH - OPTIMIZED (Parallel + Full Logging)
     # =====================================================
-    def search(self, raw_query: str) -> Dict[str, Any]:
+    def search(
+        self,
+        raw_query: str,
+        normalized_query: str | None = None,
+        query_vector: np.ndarray | list[float] | None = None,
+        top_k: int | None = None,
+    ) -> dict[str, Any]:
         t_total = time.perf_counter()
-        timings: Dict[str, float] = {}
+        timings: dict[str, float] = {}
+        result_limit = top_k if top_k is not None else RESPONSE_TOP_K
+        result_limit = max(1, min(int(result_limit), 50))
 
         # 0. Query Result Cache
         if self.cache.enabled:
-            cached = self.cache.get_search_result(raw_query)
+            cached = self.cache.get_search_result(raw_query, top_k=result_limit)
             if cached:
                 if "observability" in cached:
                     cached["observability"]["cache_hit"] = True
@@ -161,7 +176,10 @@ class SearchOrchestrator:
         # 1. PREPROCESS
         t0 = time.perf_counter()
         try:
-            query = self.preprocessor.normalize(raw_query)
+            if normalized_query is not None:
+                query = normalized_query
+            else:
+                query = self.preprocessor.normalize(raw_query)
         except Exception as e:
             raise ValidationError("Failed to preprocess query") from e
 
@@ -206,25 +224,34 @@ class SearchOrchestrator:
             }
             return final_result
 
-        # 2. PARALLEL STAGE: Metadata + Semantic + Embedding
+        # 2. PARALLEL STAGE: Metadata + Semantic (+ Embedding if not reused)
         t0 = time.perf_counter()
 
-        with ThreadPoolExecutor(max_workers=3) as executor:
+        with ThreadPoolExecutor(max_workers=2 if query_vector is not None else 3) as executor:
             future_meta = executor.submit(self.metadata_extractor.extract, query)
             future_semantic = executor.submit(self.semantic_detector.detect, query)
-            future_embedding = executor.submit(self.embedder.embed, query)
+            future_embedding = None
+            if query_vector is None:
+                future_embedding = executor.submit(self.embedder.embed, query)
 
             raw_filters = future_meta.result()
             semantic = future_semantic.result()
-            query_vector = np.asarray(future_embedding.result(), dtype=np.float32)
+            if future_embedding is not None:
+                t_emb = time.perf_counter()
+                query_vector = np.asarray(future_embedding.result(), dtype=np.float32)
+                timings["embedding_ms"] = round((time.perf_counter() - t_emb) * 1000, 2)
+            else:
+                query_vector = np.asarray(query_vector, dtype=np.float32)
+                timings["embedding_ms"] = 0.0
+                timings["embedding_reused"] = True
 
         filters = normalize_filters(raw_filters)
 
         timings["parallel_stage_ms"] = round((time.perf_counter() - t0) * 1000, 2)
 
-        # Early Rejection
+        # Early Rejection — only for clearly off-topic long queries
         semantic_score = float(semantic.get("best_score", 0.0))
-        if semantic_score < 0.12 and len(query.split()) > 5:
+        if semantic_score < 0.08 and len(query.split()) > 8:
             observability = {
                 "query_raw": raw_query,
                 "query_normalized": query,
@@ -268,16 +295,21 @@ class SearchOrchestrator:
         # 3. CANDIDATES
         t0 = time.perf_counter()
         try:
+            expanded_query = expand_query(normalize_variants(query))
             candidate_ids = self.metadata_search.search(
                 filters=filters,
-                query=query,
+                query=expanded_query,
                 semantic=semantic,
-                limit=120
+                limit=CANDIDATE_POOL_LIMIT,
             )
         except Exception as e:
             raise DatabaseError("Candidate search failed") from e
 
         timings["candidate_ms"] = round((time.perf_counter() - t0) * 1000, 2)
+
+        # Weak semantic → don't hard-restrict vector to metadata candidates
+        if candidate_ids and semantic_score < 0.22:
+            candidate_ids = None
 
         if candidate_ids is not None and len(candidate_ids) == 0:
             candidate_ids = None
@@ -307,7 +339,7 @@ class SearchOrchestrator:
         # 5. HARD REJECTION
         retrieval_score = float(quality.get("retrieval_quality", 0.0))
 
-        if semantic_score < 0.18 and retrieval_score < 0.32:
+        if semantic_score < 0.14 and retrieval_score < 0.28:
             observability = {
                 "query_raw": raw_query,
                 "query_normalized": query,
@@ -455,11 +487,12 @@ class SearchOrchestrator:
             timings=timings,
             latency_total_ms=latency_total_ms,
             final_mode=final_mode,
-            observability=observability
+            observability=observability,
+            top_k=result_limit,
         )
 
-        top_product_ids: List[int] = []
-        for item in results[:5]:
+        top_product_ids: list[int] = []
+        for item in results[:USER_RESPONSE_TOP_K]:
             product_id = item.get("id")
             try:
                 top_product_ids.append(int(product_id))
@@ -469,7 +502,7 @@ class SearchOrchestrator:
         caption_service = CaptionService(self.db)
         suggested_captions = caption_service.get_unique_captions_for_products(
             top_product_ids,
-            limit=5,
+            limit=USER_CAPTION_LIMIT,
         )
         if suggested_captions:
             print("Suggested captions:")
@@ -480,6 +513,6 @@ class SearchOrchestrator:
 
         # Final Cache
         if self.cache.enabled and final_mode not in ["empty_query", "invalid_query", "no_results"]:
-            self.cache.set_search_result(raw_query, final_result)
+            self.cache.set_search_result(raw_query, final_result, top_k=result_limit)
 
         return final_result

@@ -1,5 +1,4 @@
 import random
-from typing import Dict, List
 
 from app2.db.models import ProductCaption
 from sqlalchemy.orm import Session
@@ -9,7 +8,7 @@ class CaptionService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_captions(self, product_id: int, limit: int = 5) -> List[Dict]:
+    def get_captions(self, product_id: int, limit: int = 5) -> list[dict]:
         """دقیقاً limit کپشن با اولویت بالا + shuffle"""
 
 
@@ -17,7 +16,7 @@ class CaptionService:
             self.db.query(ProductCaption)
             .filter(
                 ProductCaption.product_id == product_id,
-                ProductCaption.is_active.is_(True),
+                ProductCaption.is_active
             )
             .order_by(ProductCaption.priority.asc())
             .limit(limit * 2)

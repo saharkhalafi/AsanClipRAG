@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class RouteDecision:
@@ -6,7 +6,7 @@ class RouteDecision:
         self,
         mode: str,
         reason: str = "",
-        signals: Optional[Dict[str, Any]] = None
+        signals: dict[str, Any] | None = None
     ):
         self.mode = mode
         self.reason = reason
@@ -18,9 +18,9 @@ class QueryRouter:
     def route(
         self,
         query: str,
-        retrieval_quality: Dict[str, Any],
-        filters: Dict[str, Any],
-        lexical_signal: Optional[Dict[str, Any]] = None
+        retrieval_quality: dict[str, Any],
+        filters: dict[str, Any],
+        lexical_signal: dict[str, Any] | None = None
     ) -> RouteDecision:
 
         # -----------------------------

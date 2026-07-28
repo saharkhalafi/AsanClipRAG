@@ -9,8 +9,10 @@ class AppBaseError(Exception):
 
 class ValidationError(AppBaseError):
     """Invalid input or business rule violation"""
-    def __init__(self, message: str = "Invalid input"):
+
+    def __init__(self, message: str = "Invalid input", *, context: dict | None = None):
         super().__init__(message, 400)
+        self.context = context or {}
 
 
 class NotFoundError(AppBaseError):

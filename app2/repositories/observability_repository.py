@@ -1,6 +1,6 @@
 # app2/repositories/observability_repository.py
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from app2.db.models import RetrievalLog
 from app2.repositories.base import BaseRepository
@@ -10,7 +10,7 @@ logger = logging.getLogger("app2.observability")
 
 class ObservabilityRepository(BaseRepository):
 
-    def create_log(self, data: Dict[str, Any]):
+    def create_log(self, data: dict[str, Any]):
         """Safe log creation using a dedicated session."""
         clean_data = {}
         for key, value in data.items():

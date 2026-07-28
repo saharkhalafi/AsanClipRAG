@@ -15,8 +15,8 @@ if project_root not in sys.path:
 # ======================
 # Imports
 # ======================
-from app2.main import app  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
+from app2.main import app  # حالا درست کار می‌کند
+from fastapi.testclient import TestClient
 
 test_client = TestClient(app)
 

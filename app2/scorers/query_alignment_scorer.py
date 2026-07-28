@@ -1,20 +1,20 @@
 # app2/scorers/query_alignment_scorer.py
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class QueryAlignmentScorer:
     """مسئول محاسبه boost alignment بین query و نتایج"""
 
     @staticmethod
-    def _extract_tokens(text: str) -> List[str]:
+    def _extract_tokens(text: str) -> list[str]:
         if not text:
             return []
         tokens = re.findall(r"[\w\u0600-\u06FF]+", text.lower())
         return [t for t in tokens if len(t) >= 3 and not t.isdigit()]
 
     @staticmethod
-    def _result_blob(item: Dict[str, Any]) -> str:
+    def _result_blob(item: dict[str, Any]) -> str:
         parts = [
             item.get("name"),
             item.get("short_description"),
@@ -29,8 +29,8 @@ class QueryAlignmentScorer:
     @staticmethod
     def score(
         query: str,
-        item: Dict[str, Any],
-        semantic: Optional[Dict[str, Any]] = None
+        item: dict[str, Any],
+        semantic: dict[str, Any] | None = None
     ) -> float:
         """محاسبه alignment boost"""
         q_tokens = QueryAlignmentScorer._extract_tokens(query)
@@ -89,10 +89,10 @@ class QueryAlignmentScorer:
 
     @staticmethod
     def apply_boost(
-        results: List[Dict[str, Any]],
+        results: list[dict[str, Any]],
         query: str,
-        semantic: Optional[Dict[str, Any]] = None
-    ) -> List[Dict[str, Any]]:
+        semantic: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         """اعمال boost به همه نتایج"""
         boosted = []
         for item in results:

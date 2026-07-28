@@ -1,7 +1,7 @@
-from typing import Any, Dict
+from typing import Any
 
 
-def normalize_filters(filters: Dict[str, Any]) -> Dict[str, Any]:
+def normalize_filters(filters: dict[str, Any]) -> dict[str, Any]:
     """
     Converts list-based filters into single values
     for SQL compatibility (Postgres =, not ANY()).

@@ -1,13 +1,11 @@
 # app2/firewall/query_firewall.py
-import os
 import re
-from typing import Any, Dict, Optional
+from typing import Any
 
 from app2.exceptions import ValidationError
 from app2.firewall.abuse_detector import AbuseDetector
 from app2.firewall.cost_controller import CostController
 from app2.firewall.injection_detector import InjectionDetector
-from app2.firewall.Presidio import PIIDetector
 from app2.firewall.query_validator import QueryValidator
 from app2.firewall.semantic_intent import SemanticIntentDetector
 
@@ -21,19 +19,6 @@ class QueryFirewall:
         self.cost = CostController()
         self.query_validator = QueryValidator()
         self.semantic = semantic_detector
-        self.pii_enabled = os.getenv("ENABLE_PII_DETECTION", "true").lower() in (
-            "1",
-            "true",
-            "yes",
-        )
-        self._pii: Optional[PIIDetector] = None
-
-    def _get_pii_detector(self) -> Optional[PIIDetector]:
-        if not self.pii_enabled:
-            return None
-        if self._pii is None:
-            self._pii = PIIDetector()
-        return self._pii
 
     def _normalize(self, query: str) -> str:
         if not query:
@@ -64,18 +49,18 @@ class QueryFirewall:
 
         return False
 
-    def check(self, query: str) -> Dict[str, Any]:
+    def check(self, query: str) -> dict[str, Any]:
         query = self._normalize(query)
 
-        signals: Dict[str, Any] = {
+        signals: dict[str, Any] = {
             "abuse": None,
             "injection": None,
-            "pii": None,
             "cost": None,
             "query_validation": None,
             "semantic": None,
             "relevance": None,
         }
+
         if not query or len(query) < 4:
             raise ValidationError("Query is empty or too short")
 
@@ -91,61 +76,55 @@ class QueryFirewall:
         if not injection_result.get("ok", False):
             raise ValidationError("Prompt injection detected")
 
-        # 3. PII (Presidio)
-        pii_detector = self._get_pii_detector()
-        if pii_detector is not None:
-            pii_result = pii_detector.check(query)
-            signals["pii"] = pii_result
-            if not pii_result.get("ok", False):
-                raise ValidationError("pii_detected")
-        else:
-            signals["pii"] = {"ok": True, "reason": "disabled"}
-
-        # 4. Cost
+        # 3. Cost
         try:
             cost_result = self.cost.check(self.db, query)
         except Exception as e:
-            cost_result = {"allowed": True, "reason": f"cost_failed:{str(e)}", "cost_units": 0}
+            cost_result = {"allowed": True, "reason": f"cost_failed:{e!s}", "cost_units": 0}
 
         signals["cost"] = cost_result
         if not cost_result.get("allowed", True):
             raise ValidationError(cost_result.get("reason", "cost_blocked"))
 
-        # 5. Query Validator
+        # 4. Query Validator
         validation = self.query_validator.validate(query)
         signals["query_validation"] = {"score": validation.score, "reason": validation.reason}
 
         if not validation.ok:
             raise ValidationError(validation.reason)
 
-        # 6. Junk
+        # 5. Junk
         if self._looks_like_junk(query):
             raise ValidationError("junk_query")
 
-        # 7. Semantic Intent
+        # 6. Semantic Intent
         semantic_result = self.semantic.detect(query)
         signals["semantic"] = semantic_result
-
-        if not semantic_result.get("ok", True):
-            reason = semantic_result.get("reason", "low_semantic_confidence")
-            raise ValidationError(reason)
 
         semantic_score = float(semantic_result.get("best_score", 0.0))
         fallback = semantic_result.get("fallback_to_name", True)
 
-        # 8. Relevance (relaxed for good queries)
+        semantic_gate = semantic_score * (1.0 if not fallback else 0.85)
+        if semantic_gate < 0.08:
+            raise ValidationError("low_semantic_confidence")
+
+        # 7. Relevance (relaxed for good queries)
         relevance = self.semantic.check_relevance(query, min_final_score=0.48)
         signals["relevance"] = relevance
 
         if not relevance.get("ok", True):
             reason = relevance.get("reason", "low_relevance")
-            if reason in ("no_similar_content", "embedding_failed"):
-                raise ValidationError(reason)
+            raise ValidationError(
+                reason,
+                context={"signals": signals, "normalized_query": query},
+            )
 
         return {
             "allowed": True,
             "reason": "ok",
             "fallback": fallback,
             "semantic_score": semantic_score,
+            "normalized_query": query,
+            "query_vector": relevance.get("query_vector"),
             "signals": signals,
         }

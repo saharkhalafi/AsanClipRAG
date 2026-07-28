@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import re
-from typing import Dict, List, Optional, Tuple
 from weakref import WeakKeyDictionary
 
 import pandas as pd
@@ -52,7 +51,7 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 #
 # NO trailing/leading spaces in keys — they silently break ALLOWED validation.
 
-PRODUCT_TYPES: Dict[str, List[str]] = {
+PRODUCT_TYPES: dict[str, list[str]] = {
     "لوگو موشن":       ["لوگو موشن", "لوگوموشن", "logo motion", "logo reveal"],
     "قالب استوری":     ["قالب استوری", "استوری اینستاگرام", "instagram story"],
     "قالب پست":        ["قالب پست", "پست اینستاگرام", "instagram post", "social post"],
@@ -71,7 +70,7 @@ PRODUCT_TYPES: Dict[str, List[str]] = {
     "ویدیو":           ["ویدیو", "video", "کلیپ", "تیزر"],   # generic — keep last
 }
 
-OCCASIONS: Dict[str, List[str]] = {
+OCCASIONS: dict[str, list[str]] = {
     "تولد":          ["تولد", "جشن تولد", "birthday"],
     "عروسی":         ["عروسی", "مراسم عروسی", "wedding"],
     "روز مادر":      ["روز مادر", "mothers day"],
@@ -86,7 +85,7 @@ OCCASIONS: Dict[str, List[str]] = {
     "عید فطر":       ["عید فطر", "عید قربان", "eid al-fitr"],
 }
 
-PLATFORMS: Dict[str, List[str]] = {
+PLATFORMS: dict[str, list[str]] = {
     "اینستاگرام": ["اینستاگرام", "instagram"],
     "یوتیوب":     ["یوتیوب", "youtube"],
     "تلگرام":     ["تلگرام", "telegram"],
@@ -96,7 +95,7 @@ PLATFORMS: Dict[str, List[str]] = {
 # NOTE: removed short ambiguous aliases ("ig", "yt", "insta", "story", "reels")
 # that caused false positives. If text says "اینستاگرام" the full word is enough.
 
-ALLOWED: Dict[str, set] = {
+ALLOWED: dict[str, set] = {
     "product_type": {k.strip() for k in PRODUCT_TYPES},
     "occasion":     {k.strip() for k in OCCASIONS},
     "platform":     {k.strip() for k in PLATFORMS},
@@ -119,7 +118,7 @@ def _normalize(t: str) -> str:
     t = re.sub(r"[^\w\s\u0600-\u06FF]", " ", t)
     return re.sub(r"\s+", " ", t).strip()
 
-def _prenormalize(rules: Dict[str, List[str]]) -> Dict[str, List[str]]:
+def _prenormalize(rules: dict[str, list[str]]) -> dict[str, list[str]]:
     """Normalize all keywords once at startup — no per-row cost."""
     return {label: [_normalize(kw) for kw in kws] for label, kws in rules.items()}
 
@@ -132,7 +131,7 @@ def hash_text(t: str) -> str:
     return hashlib.md5(_normalize(t).encode()).hexdigest()
 
 # ========================= RULE ENGINE =========================
-def match_label(text: str, norm_rules: Dict[str, List[str]]) -> Optional[str]:
+def match_label(text: str, norm_rules: dict[str, list[str]]) -> str | None:
     """
     Word-boundary match against pre-normalized keyword lists.
     Word boundaries (\b) prevent short keywords from matching inside longer words.
@@ -165,7 +164,7 @@ def has_occasion_signals(text: str) -> bool:
 # ========================= CACHE =========================
 _CV = "cache_v"
 
-def _is_fresh(cached: Optional[dict]) -> bool:
+def _is_fresh(cached: dict | None) -> bool:
     """Cache entry is valid only if written by the current TAG_VERSION."""
     return isinstance(cached, dict) and cached.get(_CV) == TAG_VERSION
 
@@ -283,14 +282,14 @@ async def _safe_call(coro) -> dict:  # type: ignore[type-arg]
         return {"product_type": None, "occasion": None, "platform": None}
 
 async def gemini_batch_async(
-    calls: List[Tuple[int, str, bool, bool]]   # (row_idx, text, need_pt, need_oc)
-) -> Dict[int, dict]:
+    calls: list[tuple[int, str, bool, bool]]   # (row_idx, text, need_pt, need_oc)
+) -> dict[int, dict]:
     """
     Fire all needed Gemini calls concurrently up to GEMINI_CONCURRENCY at a time.
     Cached results are returned immediately without hitting the API.
     """
-    task_indices: List[int] = []
-    coroutines:   List      = []
+    task_indices: list[int] = []
+    coroutines:   list      = []
 
     for idx, product_text, need_pt, need_oc in calls:
         key    = hash_text(product_text)
@@ -301,11 +300,11 @@ async def gemini_batch_async(
              coroutines.append(_gemini_call_async(product_text, key, need_pt, need_oc))
         task_indices.append(idx)
 
-    results: List[dict] = await asyncio.gather(*coroutines)
+    results: list[dict] = await asyncio.gather(*coroutines)
     return dict(zip(task_indices, results))
 
 # ========================= HYBRID EXTRACT (BATCH) =========================
-def extract_batch(rows: List[dict]) -> List[Tuple[dict, str]]:
+def extract_batch(rows: list[dict]) -> list[tuple[dict, str]]:
     """
     Decision tree per row
     ─────────────────────
@@ -321,7 +320,7 @@ def extract_batch(rows: List[dict]) -> List[Tuple[dict, str]]:
     rule_res   = [rules_extract(t) for t in normalized]
 
     # Decide which rows need Gemini and for which fields
-    gemini_calls: List[Tuple[int, str, bool, bool]] = []
+    gemini_calls: list[tuple[int, str, bool, bool]] = []
 
     for i, (res, t) in enumerate(zip(rule_res, normalized)):
         need_pt = res["product_type"] is None
@@ -349,12 +348,12 @@ def extract_batch(rows: List[dict]) -> List[Tuple[dict, str]]:
     )
 
     # Fire concurrent Gemini calls
-    gem_results: Dict[int, dict] = {}
+    gem_results: dict[int, dict] = {}
     if gemini_calls:
         gem_results = asyncio.run(gemini_batch_async(gemini_calls))
 
     # Merge and build final output
-    final: List[Tuple[dict, str]] = []
+    final: list[tuple[dict, str]] = []
 
     for i, (res, t) in enumerate(zip(rule_res, normalized)):
         gem = gem_results.get(i)
@@ -467,7 +466,7 @@ log.info(f"Rows to process: {total}")
 
 # ========================= PROCESS IN BATCHES =========================
 processed  = 0
-failed_ids: List[int] = []
+failed_ids: list[int] = []
 
 for batch_start in range(0, total, BATCH_SIZE):
     batch_df   = df.iloc[batch_start : batch_start + BATCH_SIZE]
@@ -485,8 +484,8 @@ for batch_start in range(0, total, BATCH_SIZE):
         failed_ids.extend([r["id"] for r in batch_rows])
         continue
 
-    updates_ok:   List[dict] = []
-    updates_fail: List[dict] = []
+    updates_ok:   list[dict] = []
+    updates_fail: list[dict] = []
 
     for row, input_text, (tags, source) in zip(batch_rows, input_texts, tag_results):
         try:

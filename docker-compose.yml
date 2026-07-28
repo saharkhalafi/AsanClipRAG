@@ -14,6 +14,8 @@ services:
       PYTHONUTF8: 1
       DATABASE_URL: postgresql+psycopg2://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-Sale1404}
       REDIS_URL: redis://redis:6379/0
+      ENABLE_CACHE: "true"
+      BUILD_FAISS_ON_START: ${BUILD_FAISS_ON_START:-true}
       AUTO_IMPORT_SALE1404: ${AUTO_IMPORT_SALE1404:-true}
       SEED_DATABASE: ${SEED_DATABASE:-false}
       SALE1404_SQL_PATH: /app/Sale1404.sql

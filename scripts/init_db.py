@@ -139,6 +139,43 @@ def maybe_seed_sample_data(url: str) -> None:
     subprocess.run([sys.executable, "scripts/seed_data.py"], check=True)
 
 
+def get_embedded_product_count(url: str) -> int:
+    engine = create_engine(url)
+    with engine.connect() as conn:
+        try:
+            return conn.execute(
+                text("""
+                    SELECT COUNT(*)
+                    FROM asanclipproducts
+                    WHERE tag_status = 'done'
+                      AND embedding_vector IS NOT NULL
+                """)
+            ).scalar_one()
+        except ProgrammingError:
+            return 0
+
+
+def maybe_build_faiss_index(url: str) -> None:
+    if not env_flag("BUILD_FAISS_ON_START", default=True):
+        print("Skipping FAISS build (BUILD_FAISS_ON_START=false)")
+        return
+
+    from app2.config.constants import FAISS_INDEX_PATH
+
+    index_path = Path(FAISS_INDEX_PATH)
+    if index_path.exists() and not env_flag("FORCE_REBUILD_FAISS", False):
+        print(f"FAISS index already exists at {index_path}; skipping build")
+        return
+
+    embedded_count = get_embedded_product_count(url)
+    if embedded_count < 100:
+        print(f"Only {embedded_count} embedded products; skipping FAISS build")
+        return
+
+    print(f"Building FAISS index from {embedded_count} embedded products...")
+    subprocess.run([sys.executable, "scripts/build_faiss_index.py"], check=True)
+
+
 def main() -> int:
     url = get_database_url()
     wait_for_database(url)
@@ -147,6 +184,7 @@ def main() -> int:
     maybe_import_sale1404(url)
     maybe_import_captions(url)
     maybe_seed_sample_data(url)
+    maybe_build_faiss_index(url)
     return 0
 
 

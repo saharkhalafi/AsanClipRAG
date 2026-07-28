@@ -1,6 +1,6 @@
 #app2/firewall/injection_detector.py
 
-from typing import Any, Dict
+from typing import Any
 
 
 class InjectionDetector:
@@ -26,7 +26,7 @@ class InjectionDetector:
             "پایگاه داده را نشان بده",
         ]
 
-    def check(self, query: str) -> Dict[str, Any]:
+    def check(self, query: str) -> dict[str, Any]:
         q = (query or "").lower()
 
         for p in self.patterns:

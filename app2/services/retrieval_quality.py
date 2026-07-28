@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 
@@ -7,9 +7,9 @@ class RetrievalQualityModel:
 
     def compute(
         self,
-        results: List[Dict[str, Any]],
+        results: list[dict[str, Any]],
         query: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
 
         if not results:
             return {

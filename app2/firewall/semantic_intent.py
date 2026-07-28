@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 from difflib import SequenceMatcher
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 from sqlalchemy import text
@@ -27,7 +27,7 @@ def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def _tokens(text: str) -> List[str]:
+def _tokens(text: str) -> list[str]:
     if not text:
         return []
     return re.findall(r"[\w\u0600-\u06FF]+", _normalize(text))
@@ -44,61 +44,38 @@ def _similarity(a: str, b: str) -> float:
 
 
 # =========================================================
-# QUERY NOISE / CHAT HELPERS
+# NEW: RETRIEVAL SHAPE FILTER
 # =========================================================
 
-# Conversational filler — stripped before catalog matching, NOT chat signals.
-FILLER_TOKENS = frozenset({
-    "چی", "چیه", "چیز", "چیزی", "داری", "دارید", "دارم", "دارین",
-    "میخوام", "میخواهم", "میخوای", "میخوایم", "میخواهیم",
-    "برای", "یه", "یک", "خوب", "بهترین", "لطفا", "لطفاً",
-    "بده", "بفرست", "بفرستم", "بساز", "بسازم", "کن", "کنید",
-    "کدوم", "چطور", "چجوری", "چگونه", "میشه", "میتونم", "میتونی",
-    "خیلی", "خفن", "ساده", "شیک", "لطف", "لطفا", "لطفاً",
-    "چند", "چقد", "چقدر", "هم", "رو", "را", "به", "از", "تو", "من",
-    "ما", "شما", "اون", "اونا", "این", "اون", "که", "با", "و",
-})
+def _is_retrieval_like(q: str) -> bool:
+    """
+    Very lightweight gate to block conversational / chat-like queries.
+    Not an intent classifier.
+    """
+    q = _normalize(q)
 
-# Hostile / meta-chat directed at the bot — only block when catalog has no signal.
-HOSTILE_CHAT_TOKENS = frozenset({
-    "چرا", "مگه", "اصلا", "فکر", "فکرمی", "نظرت", "مشکلت", "حالت",
-    "میگی", "میفهمی", "نمیفهمی", "احمق", "مسخره", "خراب", "اشتباه",
-    "افتضاح", "فاجعه", "usable", "hallucinate", "contradictory",
-    "نیستی", "بدی", "بد", "کیفیت", "overthink", "trust", "consistency",
-    "production", "pipeline", "failure", "offtopic", "off-topic",
-})
+    if len(q) < 4:
+        return False
 
+    tokens = set(_tokens(q))
 
-def _content_tokens(text: str) -> List[str]:
-    return [t for t in _tokens(text) if t not in FILLER_TOKENS]
+    chat_markers = {
+        "چیه", "چرا", "مگه", "اصلا", "فکر", "فکرمی", "به", "نظرت",
+        "مشکلت", "حالت", "حس", "با", "من", "میگی", "میفهمی",
+        "تبریک", "حرف", "گفتی", "چی", "داری"
+    }
 
+    # strong conversational signal
+    if len(tokens & chat_markers) >= 2:
+        return False
 
-def _is_hostile_chat(query: str) -> bool:
-    """True when the user is complaining to / about the bot, not searching."""
-    tokens = set(_tokens(query))
-    hostile_hits = tokens & HOSTILE_CHAT_TOKENS
+    # pronoun-heavy + question-like structure
+    question_markers = ["؟", "چرا", "چطوری", "چجوری"]
+    if any(m in q for m in question_markers) and len(tokens) < 10:
+        if len(tokens & chat_markers) >= 1:
+            return False
 
-    if len(hostile_hits) >= 3:
-        return True
-
-    # "تو" + complaint language is almost always meta-chat
-    if "تو" in tokens and len(hostile_hits) >= 1:
-        return True
-
-    complaint_pairs = (
-        ("چرا", "نمیفهمی"),
-        ("چرا", "بد"),
-        ("اصلا", "نمیفهمی"),
-        ("اصلا", "بلد"),
-        ("چرا", "کار"),
-        ("چرا", "اشتباه"),
-    )
-    q = _normalize(query)
-    for a, b in complaint_pairs:
-        if a in q and b in q:
-            return True
-
-    return False
+    return True
 
 
 # =========================================================
@@ -109,8 +86,8 @@ class SemanticIntentDetector:
 
     def __init__(
         self,
-        catalog: Dict[str, List[str]],
-        sparse_fields: Optional[List[str]] = None,
+        catalog: dict[str, list[str]],
+        sparse_fields: list[str] | None = None,
         fallback_label_field: str = "product_names",
         embedder=None,
         db=None
@@ -136,12 +113,21 @@ class SemanticIntentDetector:
     # =====================================================
     # MAIN DETECT
     # =====================================================
-    def detect(self, query: str) -> Dict[str, Any]:
+    def detect(self, query: str) -> dict[str, Any]:
         q = _normalize(query)
-        q_tokens = set(_tokens(q))
-        content_tokens = set(_content_tokens(q)) or q_tokens
 
-        matches: Dict[str, Any] = {}
+        if not _is_retrieval_like(q):
+            return {
+                "ok": False,
+                "best_score": 0.0,
+                "matches": {},
+                "fallback_to_name": True,
+                "reason": "chat_like_query_blocked"
+            }
+
+        q_tokens = set(_tokens(q))
+
+        matches: dict[str, Any] = {}
         best_field = None
         best_score = 0.0
 
@@ -153,7 +139,7 @@ class SemanticIntentDetector:
             field_best_score = 0.0
 
             for value in values:
-                score = self._score(q, content_tokens, value) * weight
+                score = self._score(q, q_tokens, value) * weight
                 if score > field_best_score:
                     field_best_score = score
                     field_best_value = value
@@ -175,7 +161,7 @@ class SemanticIntentDetector:
             best_name = None
 
             for name in self.catalog[self.fallback_label_field]:
-                score = self._score(q, content_tokens, name)
+                score = self._score(q, q_tokens, name)
                 if score > best_name_score:
                     best_name_score = score
                     best_name = name
@@ -189,15 +175,8 @@ class SemanticIntentDetector:
                 best_score = best_name_score
                 fallback = False
 
+        # FINAL HARD CUT
         if best_score < 0.45:
-            if _is_hostile_chat(query):
-                return {
-                    "ok": False,
-                    "best_score": round(float(best_score), 4),
-                    "matches": {},
-                    "fallback_to_name": True,
-                    "reason": "chat_like_query_blocked"
-                }
             return {
                 "ok": False,
                 "best_score": round(float(best_score), 4),
@@ -227,13 +206,6 @@ class SemanticIntentDetector:
         if query == candidate:
             return 1.0
 
-        # Multi-word catalog value fully present in query (e.g. "روز مادر")
-        if len(cand_tokens) >= 2 and cand_tokens.issubset(q_tokens):
-            return 0.92
-
-        if candidate in query:
-            return 0.88
-
         overlap = 0.0
         if q_tokens and cand_tokens:
             overlap = len(q_tokens & cand_tokens) / len(cand_tokens)
@@ -248,7 +220,7 @@ class SemanticIntentDetector:
     # =====================================================
     # RELEVANCE CHECK (UNCHANGED BUT CLEAN)
     # =====================================================
-    def check_relevance(self, query: str, min_final_score: float = 0.50) -> Dict[str, Any]:
+    def check_relevance(self, query: str, min_final_score: float = 0.50) -> dict[str, Any]:
         q = _normalize(query)
 
         if not q or len(q) < 4:
@@ -259,24 +231,36 @@ class SemanticIntentDetector:
 
         try:
             self.embedding_calls += 1
-            query_vector = self.embedder.embed(q).tolist()
+            query_vector = np.asarray(self.embedder.embed(q), dtype=np.float32)
         except Exception:
             return {"ok": True, "reason": "embedding_failed", "score": 0.5}
 
-        result = self.db.execute(text("""
-            SELECT id, name, short_description,
-                   (embedding_vector <=> CAST(:vec AS vector)) as distance
-            FROM asanclipproducts
-            WHERE tag_status = 'done'
-            ORDER BY embedding_vector <=> CAST(:vec AS vector)
-            LIMIT 8
-        """), {"vec": query_vector}).fetchall()
+        sims: list[float] = []
+        try:
+            from app2.retrieval.faiss_index import get_faiss_index
 
-        if not result:
-            return {"ok": False, "reason": "no_similar_content", "score": 0.0}
+            faiss_index = get_faiss_index()
+            if faiss_index.index is not None:
+                faiss_hits = faiss_index.search(query_vector, k=8)
+                sims = [float(sim) for _, sim in faiss_hits]
+        except Exception:
+            sims = []
 
-        distances = [r.distance for r in result]
-        sims = [1.0 - d for d in distances]
+        if not sims:
+            result = self.db.execute(text("""
+                SELECT id, name, short_description,
+                       (embedding_vector <=> CAST(:vec AS vector)) as distance
+                FROM asanclipproducts
+                WHERE tag_status = 'done'
+                ORDER BY embedding_vector <=> CAST(:vec AS vector)
+                LIMIT 8
+            """), {"vec": query_vector.tolist()}).fetchall()
+
+            if not result:
+                return {"ok": False, "reason": "no_similar_content", "score": 0.0}
+
+            distances = [r.distance for r in result]
+            sims = [1.0 - d for d in distances]
 
         avg_sim = sum(sims) / len(sims)
         top1_sim = sims[0]
@@ -305,7 +289,8 @@ class SemanticIntentDetector:
                 "reason": "low_semantic_relevance_or_chat_like",
                 "final_score": round(final_score, 4),
                 "top1_sim": round(top1_sim, 4),
-                "avg_sim": round(avg_sim, 4)
+                "avg_sim": round(avg_sim, 4),
+                "query_vector": query_vector.tolist(),
             }
 
         return {
@@ -313,5 +298,6 @@ class SemanticIntentDetector:
             "reason": "ok",
             "final_score": round(final_score, 4),
             "top1_sim": round(top1_sim, 4),
-            "avg_sim": round(avg_sim, 4)
+            "avg_sim": round(avg_sim, 4),
+            "query_vector": query_vector.tolist(),
         }

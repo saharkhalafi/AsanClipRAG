@@ -5,10 +5,11 @@ import hashlib
 import logging
 import math
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 from uuid import UUID
 
 import numpy as np
+
 from app2.db.session import SessionLocal
 from app2.repositories.observability_repository import ObservabilityRepository
 
@@ -46,7 +47,7 @@ class ObservabilityLogger:
 
     # ── Derived field defaults ─────────────────────────────────────────────────
 
-    def _fill_defaults(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def _fill_defaults(self, data: dict[str, Any]) -> dict[str, Any]:
         query_text = str(
             data.get("query_normalized") or data.get("query_raw") or ""
         ).strip()
@@ -91,7 +92,7 @@ class ObservabilityLogger:
 
     # ── Public API ─────────────────────────────────────────────────────────────
 
-    def log_search_event(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def log_search_event(self, payload: dict[str, Any]) -> dict[str, Any]:
         data = self._jsonable(payload)
         data = self._fill_defaults(data)
 
@@ -106,10 +107,19 @@ class ObservabilityLogger:
                 )
                 return {"ok": False, "error": "db_write_failed"}
 
+            extra = data.get("extra") or {}
             self.logger.info(
-                "Logged search event %s for request %s",
-                row.id,
+                "search_intent request_id=%s blocked=%s mode=%s semantic_score=%s "
+                "top1_vector_sim=%s query_len=%s tokens=%s weak_results=%s reason=%s",
                 data.get("request_id"),
+                data.get("blocked"),
+                data.get("mode"),
+                data.get("semantic_best_score"),
+                extra.get("top1_vector_sim"),
+                data.get("query_length"),
+                data.get("token_count"),
+                extra.get("results_looked_weak"),
+                data.get("block_reason") or data.get("firewall_reason") or data.get("mode"),
             )
             return {"ok": True, "id": row.id}
         except Exception:
