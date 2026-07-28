@@ -23,6 +23,9 @@ def get_faiss_index(
         _shared_faiss.load_index()
     return _shared_faiss
 
+import faiss
+import numpy as np
+
 
 class FaissIndex:
     def __init__(

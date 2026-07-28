@@ -8,6 +8,9 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+*.sql
+products.sql
+Sale1404.sql
 
 # Python
 __pycache__/
