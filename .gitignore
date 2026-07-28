@@ -129,7 +129,7 @@ secrets/
 *.pem
 credentials.json
 
-
+__pycache__/
 # Large data / dumps
 *.sql
 products.sql
