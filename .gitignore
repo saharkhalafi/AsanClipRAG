@@ -133,7 +133,6 @@ credentials.json
 products.sql
 golden_dataset.json
 Sale1404.sql
-*.csv
 embedding_cache.json
 body.json
 

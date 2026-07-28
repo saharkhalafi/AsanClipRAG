@@ -154,9 +154,6 @@ class SearchEventBuilder:
             "attempt_count":  0,
             "candidate_count": 0,
             "top_result_score": intent.get("top1_vector_sim"),
-            # intent dataset
-            "manual_intent_label":    None,
-            "manual_relevance_label": None,
             "extra": intent,
         }
         payload.update(_extract_cost(fw_context))
@@ -255,10 +252,6 @@ class SearchEventBuilder:
             # cache info
             "cache_hit": cache_hit,
             "cache_layer": cache_layer,
-            # intent dataset
-            "manual_intent_label":    None,
-            "manual_relevance_label": None,
-            # extra — RIS feature store
             "extra": merged_extra,
         }
         payload.update(_extract_cost(fw_context))

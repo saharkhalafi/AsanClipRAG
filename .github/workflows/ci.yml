@@ -64,7 +64,9 @@ jobs:
       ENVIRONMENT: test
       ENABLE_CACHE: "false"
       ENABLE_PII_DETECTION: "false"
+      GEMINI_API_KEY: ""
       PYTHONPATH: .
+      PYTHONIOENCODING: utf-8
 
     steps:
       - uses: actions/checkout@v4
@@ -94,14 +96,14 @@ jobs:
           alembic upgrade head
 
       - name: Run unit tests
-        run: pytest tests/ -v --tb=short
+        run: python -m pytest tests/ -v --tb=short
 
       - name: Run integration tests
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           if [ -n "$GEMINI_API_KEY" ]; then
-            pytest tests/ -v --tb=short -m integration
+            python -m pytest tests/ -v --tb=short -m integration
           else
             echo "Skipping integration tests (GEMINI_API_KEY secret not configured)"
           fi

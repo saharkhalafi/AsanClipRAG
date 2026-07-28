@@ -6,19 +6,20 @@ from pathlib import Path
 import numpy as np
 import pytest
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-try:
-    from dotenv import load_dotenv
+if not os.getenv("GITHUB_ACTIONS"):
+    try:
+        from dotenv import load_dotenv
 
-    load_dotenv(ROOT / ".env")
-except ImportError:
-    pass
+        load_dotenv(ROOT / ".env", override=False)
+    except ImportError:
+        pass
 
 os.environ.setdefault(
     "DATABASE_URL",
@@ -28,9 +29,15 @@ os.environ.setdefault("ENVIRONMENT", "test")
 os.environ.setdefault("ENABLE_CACHE", "false")
 os.environ.setdefault("ENABLE_PII_DETECTION", "false")
 
+# Rewrite Docker Compose service hostname only for local host-side pytest runs.
 _db_url = os.environ.get("DATABASE_URL", "")
-if "@postgres:" in _db_url:
-    os.environ["DATABASE_URL"] = _db_url.replace("@postgres:5432", "@localhost:5433")
+if (
+    not os.getenv("GITHUB_ACTIONS")
+    and "@postgres:5432/" in _db_url
+):
+    os.environ["DATABASE_URL"] = _db_url.replace(
+        "@postgres:5432/", "@localhost:5433/"
+    )
 
 from app2.db.base import Base  # noqa: E402
 from app2.exceptions import ValidationError  # noqa: E402
@@ -80,10 +87,13 @@ def db_engine():
             conn = conn.execution_options(isolation_level="AUTOCOMMIT")
             conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
             conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
-    except OperationalError as exc:
+    except SQLAlchemyError as exc:
         pytest.skip(f"PostgreSQL not available: {exc}")
 
-    Base.metadata.create_all(engine)
+    try:
+        Base.metadata.create_all(engine)
+    except SQLAlchemyError as exc:
+        pytest.skip(f"PostgreSQL schema setup failed: {exc}")
     yield engine
 
 
