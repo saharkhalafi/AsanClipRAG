@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 from app2.builders.observability_builder import ObservabilityBuilder
 from app2.builders.response_builder import ResponseBuilder
-from app2.cache.cache_service import CacheService
+from app2.cache import CacheService
 
 # Constants
 from app2.config.constants import (

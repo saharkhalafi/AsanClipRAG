@@ -84,8 +84,10 @@ vector_index/
 logs/
 *.log
 data/
-cache/
+/cache/
 temp/
+!app2/cache/
+!app2/cache/**
 indexes/
 
 # Testing

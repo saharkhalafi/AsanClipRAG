@@ -15,7 +15,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from app2.cache.cache_service import CacheService
+from ..cache.cache_service import CacheService
 from app2.exceptions import DatabaseError, ValidationError
 
 logger = logging.getLogger("app2.embedding")
