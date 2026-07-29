@@ -1,341 +1,191 @@
 # AsanClip RAG System
 
-**Production-grade Hybrid Retrieval-Augmented Generation (RAG) Engine** for intelligent video template search.
+**Production-grade hybrid retrieval engine for intelligent video template search.**
+
+AsanClip helps users find the right video templates using natural language (Persian, English, or mixed). It combines vector search, BM25, metadata filtering, multi-stage ranking, security gating, and full request observability.
 
 ---
 
-## 🚀 Project Overview
+## Highlights
 
-AsanClip is a robust, scalable, and production-ready RAG system designed to deliver highly relevant video template search results.
-
-The system combines:
-
-- Semantic vector search
-- Lexical retrieval (BM25)
-- Metadata filtering
-- Intelligent ranking
-- Query routing
-- Security validation
-- Production-grade observability
-
-The goal is to provide a high-quality search experience where users can express their intent naturally and receive the most relevant video templates.
+- **Hybrid retrieval**: FAISS / pgvector + BM25 + metadata candidates
+- **Persian-first query understanding**: normalization, synonyms, catalog-aware intent
+- **Query firewall**: injection, abuse, cost, relevance, and semantic gating
+- **Multi-stage ranking**: vector + lexical + metadata boost + alignment
+- **Compact API contract**: top **5** products with unique captions
+- **Production ops**: Docker, Alembic, structured `retrieval_logs`, GitHub Actions CI
 
 ---
 
-# ✨ Key Features
+## Evaluation (Golden Set)
 
-## 🔍 Hybrid Retrieval Engine
+Offline evaluation on **82** labeled queries after retrieval-quality fixes:
 
-AsanClip uses a multi-strategy retrieval pipeline:
+| Metric | Before | After | Change |
+|--------|--------:|-------:|--------:|
+| **MRR** | 0.668 | **0.686** | +2.7% |
+| **Recall@10** | 0.446 | **0.617** | +38% |
+| **Precision@10** | 0.239 | **0.365** | +53% |
+| **nDCG@10** | 0.484 | **0.595** | +23% |
+| **Hit Rate@10** | 0.756 | **0.805** | +6.5% |
+| **Failed (0 results)** | 6 | **4** | −2 |
 
-- Vector similarity search
-- BM25 lexical search
-- Metadata-aware filtering
-- Metadata boosting
-- Hybrid ranking
+### Latency
 
-Supports:
+- **Cold / warm path:** ~700–900 ms
+- **Cached queries:** ~80–170 ms
 
-- Persian language queries
-- English language queries
-- Mixed-language search scenarios
-
----
-
-## 🛡️ Advanced Query Firewall
-
-A dedicated security layer before retrieval:
-
-- Prompt injection detection
-- Query abuse prevention
-- Cost control
-- Semantic intent validation
-- Malicious input filtering
+Main quality gains came from deeper candidates, correct BM25→lexical scoring, stronger hybrid fusion, Persian synonym handling, and metadata boost fixes — without a latency regression.
 
 ---
 
-## 🧠 Intelligent Query Routing
+# Architecture
 
-The system dynamically selects the best retrieval strategy:
-
-- Vector search
-- Hybrid retrieval
-- Lexical fallback
-- Heavy fallback mode
-
-Routing decisions are based on:
-
-- Query characteristics
-- Retrieval confidence
-- Result quality signals
-
----
-
-## 🏆 Multi-Stage Ranking System
-
-The final ranking combines multiple signals:
-
-- Semantic similarity score
-- BM25 relevance score
-- Metadata relevance
-- Business rules
-- Confidence signals
-
-Using:
-
-```
-UnifiedRanker
-```
-
-with configurable weighted scoring.
-
----
-
-## 📊 Production Observability
-
-The system provides detailed monitoring and analytics:
-
-- Request tracing
-- Retrieval latency breakdown
-- Query quality metrics
-- Ranking analysis
-- Cache monitoring
-- Structured event logging
-
-All retrieval events are stored in:
-
-```
-retrieval_logs
+```text
+                           User Query
+                               │
+                               ▼
+                   FastAPI (/api/v1/search)
+                               │
+                               ▼
+                        Query Firewall
+        (abuse · injection · cost · relevance · semantic intent)
+                               │
+                               ▼
+                     SearchOrchestrator
+                               │
+      ┌────────────────────────┼────────────────────────┐
+      │                        │                        │
+      ▼                        ▼                        ▼
+Query preprocess        Synonym expansion      Metadata extraction
+      │                        │                        │
+      └────────────────────────┼────────────────────────┘
+                               ▼
+                     Candidate Generation
+                               │
+                               ▼
+                  RetrievalOrchestrator
+      ┌────────────────────────┼────────────────────────┐
+      │                        │                        │
+      ▼                        ▼                        ▼
+ Vector Search             BM25 Search          Metadata Search
+(FAISS → pgvector)      (+ Persian fallback)
+      │                        │                        │
+      └────────────────────────┼────────────────────────┘
+                               ▼
+                   Hybrid Fusion & Retry Logic
+                               │
+                               ▼
+                           Ranking
+      (UnifiedRanker · metadata boost · alignment)
+                               │
+                               ▼
+               Top 5 Products + Unique Captions
+                               │
+                               ▼
+          Observability (isolated retrieval_logs session)
 ```
 
-for future optimization and analytics.
+> **Design principle:** Maintain a large internal candidate pool to maximize ranking quality, then expose only a compact top-k response to clients.
 
 ---
 
-# 🏗️ Architecture
+## Key Components
 
-The system follows a clean and modular layered architecture:
-
-```
-                    User Query
-                        |
-                        v
-                  FastAPI API Layer
-                        |
-                        v
-                Query Firewall Layer
-                        |
-                        v
-             Search Orchestration Layer
-                        |
-                        v
-        -----------------------------------
-        |                |                |
-        v                v                v
- Vector Retrieval   BM25 Retrieval   Metadata Search
-        |                |                |
-        -----------------------------------
-                        |
-                        v
-              Unified Ranking Layer
-                        |
-                        v
-              Quality Evaluation
-                        |
-                        v
-                 Final Results
-```
+| Layer | Responsibility |
+|-------|----------------|
+| **API** | FastAPI routes, request validation, response contract |
+| **Firewall** | Security, abuse prevention, semantic validation |
+| **Orchestration** | Pipeline control, routing, retries, fallbacks |
+| **Retrieval** | Vector search, BM25, metadata candidates, hybrid fusion |
+| **Ranking** | Semantic + lexical + metadata score fusion |
+| **Observability** | Request tracing, latency metrics, quality signals |
+| **Cache** | Query-result caching (cache key includes `top_k`) |
 
 ---
 
-# 🧩 System Components
+# Project Structure
 
-## API Layer
-
-Technology:
-
-```
-FastAPI
-```
-
-Responsibilities:
-
-- API request handling
-- Input validation
-- Response generation
-
----
-
-## Security Layer
-
-Component:
-
-```
-Query Firewall
-```
-
-Responsibilities:
-
-- Query validation
-- Security checks
-- Abuse prevention
-- Intent verification
-
----
-
-## Orchestration Layer
-
-Components:
-
-```
-SearchOrchestrator
-RetrievalOrchestrator
-```
-
-Responsibilities:
-
-- Pipeline execution
-- Retrieval strategy selection
-- Stage management
-- Fallback handling
-
----
-
-## Retrieval Layer
-
-### Vector Retrieval
-
-Technologies:
-
-- FAISS
-- PostgreSQL pgvector
-
-Purpose:
-
-- Semantic similarity search
-- Meaning-based retrieval
-
----
-
-### Lexical Retrieval
-
-Technology:
-
-- BM25
-
-Purpose:
-
-- Exact keyword matching
-- Robust lexical fallback
-
----
-
-### Metadata Retrieval
-
-Purpose:
-
-- Category filtering
-- Platform matching
-- Occasion matching
-- Business-aware retrieval
-
----
-
-# 📂 Project Structure
-
-```bash
+```text
 app2/
-├── api/                    # FastAPI routes
-├── core/                   # Application settings
-├── db/                     # Database models and sessions
-├── firewall/               # Query security and validation
-├── retrieval/              # Vector, BM25, hybrid retrieval
-├── ranking/                # Ranking algorithms
-├── services/               # Orchestrators and business logic
-├── metadata/               # Metadata processing
-├── analytics/              # Metrics and analytics
-├── docs/                   # Documentation
-├── scripts/                # Maintenance scripts
-├── tests/                  # Automated tests
+├── api/              # FastAPI routes
+├── analytics/        # Event builders & logging
+├── builders/         # Response / observability builders
+├── cache/            # Cache service (tracked in Git)
+├── core/             # Configuration
+├── db/               # Models, sessions, database
+├── firewall/         # Security & intent validation
+├── metadata/         # Metadata loading & extraction
+├── ranking/          # UnifiedRanker & ranking logic
+├── retrieval/        # FAISS, BM25, hybrid retrieval
+├── services/         # Search & retrieval orchestrators
+├── utils/            # Filters, synonyms, helpers
 │
-├── Dockerfile
-├── docker-compose.yml
-└── requirements.txt
+evaluation/           # Golden set & offline evaluation
+docs/                 # Architecture, database, deployment
+docker/               # PostgreSQL init scripts
+migrations/           # Alembic migrations
+scripts/              # Maintenance utilities
+tests/                # Automated tests
+Dockerfile
+docker-compose.yml
+requirements.txt
 ```
 
 ---
 
-# ⚙️ Installation & Local Development
+# Quick Start (Docker)
 
 ## Prerequisites
 
-Required:
-
 - Docker
 - Docker Compose
-- Python 3.11+
+- Python 3.11+ (optional for local evaluation)
 
----
-
-# 🐳 Running with Docker
-
-Clone the repository:
+## Clone
 
 ```bash
 git clone <your-repository-url>
-
-cd asanclip-rag
+cd AsanClipRAG
 ```
 
-Create environment file:
+## Configure
 
 ```bash
 cp .env.example .env
 ```
 
-Set your API keys in `.env`. For Docker, keep `DB_HOST=postgres` and `DATABASE_URL` pointing at the `postgres` service (see `.env.example`).
+Update your secrets and API keys.
 
-Build and start services:
+For Docker:
+
+- `DB_HOST=postgres`
+- `DATABASE_URL` should point to the PostgreSQL service.
+
+## Run
 
 ```bash
 docker compose up --build
 ```
 
-Run database migrations manually:
+On startup the application typically:
 
-```bash
-docker compose run --rm migration
-```
+1. Waits for PostgreSQL
+2. Enables required extensions (`pgvector`, etc.)
+3. Runs Alembic migrations
+4. Imports product data when configured or when the database is empty
 
-Import all products from `Sale1404.sql` (about 2300 rows):
+---
 
-```bash
-docker compose run --rm migration
-docker compose run --rm import-db
-```
+## Endpoints
 
-On startup the app container will:
-
-1. Wait for PostgreSQL
-2. Enable `pgvector` extensions
-3. Run Alembic migrations
-4. Import products from `Sale1404.sql` if the database has fewer than 100 rows
-5. Only use the 3-row sample seed if `SEED_DATABASE=true` and the database is still empty
-
-To reset the database and reload everything from scratch:
-
-```bash
-docker compose down -v
-docker compose up --build
-```
-
-The API will be available at:
+Application:
 
 ```
 http://localhost:8000
 ```
 
-Swagger documentation:
+Swagger UI:
 
 ```
 http://localhost:8000/docs
@@ -343,50 +193,70 @@ http://localhost:8000/docs
 
 ---
 
-# 🔧 Configuration
+## Useful Docker Commands
 
-All configuration is managed using environment variables.
+### Rebuild application
 
-Configuration files:
-
+```bash
+docker compose up --build -d app
 ```
-.env.example
-core/settings.py
-docs/deployment.md
+
+### View logs
+
+```bash
+docker compose logs -f app
+```
+
+### PostgreSQL shell
+
+```bash
+docker compose exec postgres psql -U postgres -d Sale1404
+```
+
+### Reset everything (destructive)
+
+```bash
+docker compose down -v
+docker compose up --build
 ```
 
 ---
 
-# 🔌 API
+# API
 
-## Search Endpoint
+## Search
 
-```
-POST /api/v1/search
-```
-
-Search pipeline:
+**POST**
 
 ```
-User Query
-    |
-    v
-Firewall Validation
-    |
-    v
-Query Routing
-    |
-    v
-Hybrid Retrieval
-    |
-    v
+/api/v1/search
+```
+
+### Request
+
+```json
+{
+  "query": "استوری تولد کودکانه"
+}
+```
+
+### Processing Pipeline
+
+```text
+Firewall
+    ↓
+Query preprocessing
+    ↓
+Hybrid retrieval
+    ↓
 Ranking
-    |
-    v
-Final Response
+    ↓
+Top-5 response
+    ↓
+Observability logging
 ```
 
-Full API documentation:
+Interactive API documentation is available at:
 
 ```
 /docs
@@ -394,144 +264,164 @@ Full API documentation:
 
 ---
 
-# 🗄️ Database
+# Database
 
-Database:
+The system uses:
 
-```
-PostgreSQL
-```
+- PostgreSQL
+- pgvector
+- Alembic migrations
 
-Extension:
+Main stored entities include:
 
-```
-pgvector
-```
+- Product catalog (`asanclipproducts`)
+- Captions
+- Firewall usage
+- Rich `retrieval_logs`
 
-Capabilities:
-
-- Vector storage
-- Similarity search
-- Retrieval analytics
-- Request tracing
-
-Observability table:
-
-```
-retrieval_logs
-```
-
-Detailed documentation:
+See:
 
 ```
 docs/database.md
 ```
 
----
-
-# 📈 Observability
-
-The system provides:
-
-## Request Tracking
-
-- Complete request lifecycle tracing
-- Pipeline execution monitoring
-
-## Performance Monitoring
-
-- Latency breakdown
-- Stage-level timing
-
-## Retrieval Quality
-
-- Query routing signals
-- Confidence estimation
-- Retrieval mode analysis
-
-## Cache Monitoring
-
-- Cache hit ratio
-- Query reuse analysis
+for schema details and indexing strategy.
 
 ---
 
-# 🐋 Docker Architecture
+# Observability
 
-The Docker setup follows production best practices:
+Each search request can record:
 
-Features:
+- Request ID
+- Session ID
+- User ID
+- Original query
+- Normalized query
+- Firewall decisions
+- Retrieval mode
+- Retry information
+- Quality scores
+- Stage-by-stage latency
+- Cache hit/miss
+- Returned result snapshot
 
-- Multi-stage Docker build
-- Optimized production image
-- Slim runtime environment
-- Non-root execution user
-- Secure permissions handling
-- Persistent volume support
-
-Main files:
-
-```
-Dockerfile
-docker-compose.yml
-```
-
----
-
-# 🛣️ Future Roadmap
-
-Planned improvements:
-
-## Ranking Intelligence
-
-- A/B testing framework
-- Automated golden dataset generation
-- Learned reranker models
-
-## Monitoring
-
-- Advanced analytics dashboard
-- Retrieval quality visualization
-
-## Scalability
-
-- Horizontal scaling
-- Kubernetes deployment
-- Distributed retrieval infrastructure
+Logging uses an **isolated database session**, ensuring observability failures never interrupt user searches.
 
 ---
 
-# 🤝 Contributing
+# Offline Evaluation
 
-Contributions are welcome.
+Run evaluation while the API is running:
 
-Please review:
-
-```
-CONTRIBUTING.md
+```bash
+python evaluation/evaluate.py
 ```
 
-before submitting changes.
+Golden dataset:
+
+```text
+evaluation/
+```
+
+Generated report:
+
+```text
+evaluation/results/eval_report.json
+```
+
+Primary metrics:
+
+- MRR
+- Recall@K
+- Precision@K
+- nDCG@K
+- Hit Rate@K
+- Latency
 
 ---
 
-# 📄 License
+# Configuration
 
-This project is licensed under the:
+Configuration sources:
 
 ```
+.env.example
+```
+
+Typed settings:
+
+```
+app2/core/settings.py
+```
+
+Deployment notes:
+
+```
+docs/deployment.md
+```
+
+> Never commit production `.env` files or large SQL dumps.
+
+---
+
+# CI / Quality Gates
+
+GitHub Actions validates:
+
+- Ruff lint
+- Pytest
+- Alembic migration integrity
+- Docker build
+
+Packaging lesson learned:
+
+> Ignore rules should never exclude application packages (for example, prefer `/cache/` over a broad `cache/` ignore rule that removes `app2/cache`).
+
+---
+
+# Roadmap
+
+- Larger Golden Set
+- Continuous regression evaluation in CI
+- CTR / click-based ranking calibration
+- Optional learned reranker (only if justified by offline & online metrics)
+- Rich observability dashboards
+- Horizontal scaling (stateless API + shared cache + managed PostgreSQL)
+
+---
+
+# Contributing
+
+1. Create a branch from `develop` (or the default development branch)
+2. Keep pull requests focused
+3. Run lint and tests locally whenever possible
+4. Open a Pull Request targeting the integration branch
+
+See `CONTRIBUTING.md` if available.
+
+---
+
+# License
+
 MIT License
+
+See:
+
+```
+LICENSE
 ```
 
 ---
 
-# ❤️ About
+# About
 
-Built with a focus on:
+Built for real-world Persian and English template search with a focus on:
 
-- High-quality retrieval
-- Production reliability
-- Scalable AI architecture
-- Real-world search experience
+- Reliable hybrid retrieval
+- Explicit security gates
+- Measurable search quality
+- Production-ready operations
+- Observable search pipelines
 
-**Made with ❤️ for intelligent video template discovery.**
+**AsanClip** — *Intelligent Video Template Discovery.*
