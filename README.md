@@ -19,7 +19,7 @@ AsanClip helps users find the right video templates using natural language (Pers
 
 ## Evaluation (Golden Set)
 
-Offline evaluation on **82** labeled queries after retrieval-quality fixes:
+Offline evaluation on **100** labeled queries after retrieval-quality fixes:
 
 | Metric | Before | After | Change |
 |--------|--------:|-------:|--------:|
