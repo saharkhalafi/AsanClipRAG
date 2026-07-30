@@ -16,3 +16,11 @@ def test_search_chat_like_blocked(test_client):
     assert response.status_code == 200
     data = response.json()
     assert data["mode"] in ["blocked_by_firewall", "validation_error"]
+
+
+def test_readiness_does_not_expose_database_credentials(test_client):
+    response = test_client.get("/api/v1/ready")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ready"
+    assert "database_url" not in data

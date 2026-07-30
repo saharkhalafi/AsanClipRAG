@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     )
 
     ENVIRONMENT: Literal["development", "production", "test"] = "development"
+    CORS_ORIGINS: str = "*"
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -24,6 +25,14 @@ class Settings(BaseSettings):
 
     # Logging
     LOG_LEVEL: str = "INFO"
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [
+            origin.strip()
+            for origin in self.CORS_ORIGINS.split(";")
+            if origin.strip()
+        ]
 
     def setup(self):
         setup_logging(self.LOG_LEVEL)
