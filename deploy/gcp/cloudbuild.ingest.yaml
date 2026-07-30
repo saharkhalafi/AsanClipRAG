@@ -1,0 +1,47 @@
+# Data pipeline: migrate -> upsert CSV -> embed changed products -> build an
+# immutable FAISS release -> roll the API to that release.
+substitutions:
+  _REGION: europe-west1
+  _SERVICE_NAME: asanclip-api
+  _CSV_OBJECT: incoming/products.csv
+  _MIN_VECTORS: "100"
+
+steps:
+  - id: migrate
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - execute
+      - ${_SERVICE_NAME}-migrate
+      - --region=${_REGION}
+      - --wait
+
+  - id: ingest-embed-build
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - execute
+      - ${_SERVICE_NAME}-pipeline
+      - --region=${_REGION}
+      - --args=scripts/run_ingestion_pipeline.py,--csv,/mnt/data/${_CSV_OBJECT},--output,/mnt/data/releases/$BUILD_ID/faiss.index,--run-id,$BUILD_ID,--min-vectors,${_MIN_VECTORS},--retry-errors
+      - --wait
+
+  - id: activate-faiss-release
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - services
+      - update
+      - ${_SERVICE_NAME}
+      - --region=${_REGION}
+      - --update-env-vars=FAISS_INDEX_PATH=/mnt/faiss/releases/$BUILD_ID/faiss.index,FAISS_INDEX_VERSION=$BUILD_ID
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 86400s

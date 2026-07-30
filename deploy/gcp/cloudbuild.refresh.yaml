@@ -1,0 +1,47 @@
+# Scheduled/manual refresh for products written directly to Cloud SQL. The
+# database trigger marks semantic changes pending; this embeds them and rolls a
+# new immutable FAISS release without ingesting a CSV.
+substitutions:
+  _REGION: europe-west1
+  _SERVICE_NAME: asanclip-api
+  _MIN_VECTORS: "100"
+
+steps:
+  - id: migrate
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - execute
+      - ${_SERVICE_NAME}-migrate
+      - --region=${_REGION}
+      - --wait
+
+  - id: embed-and-build
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - execute
+      - ${_SERVICE_NAME}-pipeline
+      - --region=${_REGION}
+      - --args=scripts/run_ingestion_pipeline.py,--output,/mnt/data/releases/$BUILD_ID/faiss.index,--run-id,$BUILD_ID,--min-vectors,${_MIN_VECTORS},--retry-errors
+      - --wait
+
+  - id: activate-faiss-release
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - services
+      - update
+      - ${_SERVICE_NAME}
+      - --region=${_REGION}
+      - --update-env-vars=FAISS_INDEX_PATH=/mnt/faiss/releases/$BUILD_ID/faiss.index,FAISS_INDEX_VERSION=$BUILD_ID
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 86400s

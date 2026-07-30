@@ -1,0 +1,187 @@
+# Build the immutable image, configure Cloud Run Jobs, migrate Cloud SQL, and
+# deploy the private API service. Override substitutions for your environment.
+substitutions:
+  _REGION: europe-west1
+  _AR_REPOSITORY: asanclip
+  _IMAGE_NAME: api
+  _SERVICE_NAME: asanclip-api
+  _API_SA_NAME: asanclip-api
+  _PIPELINE_SA_NAME: asanclip-pipeline
+  _CLOUD_SQL_INSTANCE: CHANGE_ME_PROJECT:CHANGE_ME_REGION:CHANGE_ME_INSTANCE
+  _DATABASE_URL_SECRET: asanclip-database-url
+  _PIPELINE_DATABASE_URL_SECRET: asanclip-pipeline-database-url
+  _GEMINI_API_KEY_SECRET: asanclip-gemini-api-key
+  _FAISS_BUCKET: CHANGE_ME_FAISS_BUCKET
+  _EMBEDDING_MODEL: gemini-embedding-001
+  _CORS_ORIGINS: https://CHANGE_ME.example
+
+steps:
+  - id: build-image
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --tag
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID
+      - .
+
+  - id: push-image
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID
+
+  - id: deploy-migration-job
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - deploy
+      - ${_SERVICE_NAME}-migrate
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID
+      - --region=${_REGION}
+      - --service-account=${_PIPELINE_SA_NAME}@$PROJECT_ID.iam.gserviceaccount.com
+      - --set-cloudsql-instances=${_CLOUD_SQL_INSTANCE}
+      - --set-secrets=DATABASE_URL=${_PIPELINE_DATABASE_URL_SECRET}:latest
+      - --command=alembic
+      - --args=upgrade,head
+      - --cpu=1
+      - --memory=512Mi
+      - --task-timeout=10m
+      - --max-retries=1
+
+  - id: deploy-ingestion-job
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - deploy
+      - ${_SERVICE_NAME}-ingest
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID
+      - --region=${_REGION}
+      - --service-account=${_PIPELINE_SA_NAME}@$PROJECT_ID.iam.gserviceaccount.com
+      - --set-cloudsql-instances=${_CLOUD_SQL_INSTANCE}
+      - --set-secrets=DATABASE_URL=${_PIPELINE_DATABASE_URL_SECRET}:latest
+      - --command=python
+      - --args=scripts/ingest_products.py,--csv,/mnt/data/incoming/products.csv
+      - --add-volume=name=data,type=cloud-storage,bucket=${_FAISS_BUCKET},mount-options=uid=10001;gid=10001
+      - --add-volume-mount=volume=data,mount-path=/mnt/data
+      - --cpu=2
+      - --memory=4Gi
+      - --task-timeout=2h
+      - --max-retries=1
+
+  - id: deploy-embedding-job
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - deploy
+      - ${_SERVICE_NAME}-embed
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID
+      - --region=${_REGION}
+      - --service-account=${_PIPELINE_SA_NAME}@$PROJECT_ID.iam.gserviceaccount.com
+      - --set-cloudsql-instances=${_CLOUD_SQL_INSTANCE}
+      - --set-secrets=DATABASE_URL=${_PIPELINE_DATABASE_URL_SECRET}:latest,GEMINI_API_KEY=${_GEMINI_API_KEY_SECRET}:latest
+      - --set-env-vars=ENABLE_CACHE=false,ENVIRONMENT=production,EMBEDDING_DIMENSION=3072,EMBEDDING_MODEL=${_EMBEDDING_MODEL}
+      - --command=python
+      - --args=scripts/generate_embeddings.py,--batch-size,50
+      - --cpu=2
+      - --memory=4Gi
+      - --task-timeout=24h
+      - --max-retries=0
+
+  - id: deploy-faiss-job
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - deploy
+      - ${_SERVICE_NAME}-faiss
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID
+      - --region=${_REGION}
+      - --service-account=${_PIPELINE_SA_NAME}@$PROJECT_ID.iam.gserviceaccount.com
+      - --set-cloudsql-instances=${_CLOUD_SQL_INSTANCE}
+      - --set-secrets=DATABASE_URL=${_PIPELINE_DATABASE_URL_SECRET}:latest
+      - --set-env-vars=EMBEDDING_DIMENSION=3072,EMBEDDING_MODEL=${_EMBEDDING_MODEL}
+      - --command=python
+      - --args=scripts/build_faiss_index.py,--output,/mnt/faiss/current/faiss.index,--expected-model,${_EMBEDDING_MODEL}
+      - --add-volume=name=faiss,type=cloud-storage,bucket=${_FAISS_BUCKET},mount-options=uid=10001;gid=10001
+      - --add-volume-mount=volume=faiss,mount-path=/mnt/faiss
+      - --cpu=4
+      - --memory=8Gi
+      - --task-timeout=2h
+      - --max-retries=0
+
+  - id: deploy-pipeline-job
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - deploy
+      - ${_SERVICE_NAME}-pipeline
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID
+      - --region=${_REGION}
+      - --service-account=${_PIPELINE_SA_NAME}@$PROJECT_ID.iam.gserviceaccount.com
+      - --set-cloudsql-instances=${_CLOUD_SQL_INSTANCE}
+      - --set-secrets=DATABASE_URL=${_PIPELINE_DATABASE_URL_SECRET}:latest,GEMINI_API_KEY=${_GEMINI_API_KEY_SECRET}:latest
+      - --set-env-vars=ENABLE_CACHE=false,ENVIRONMENT=production,EMBEDDING_DIMENSION=3072,EMBEDDING_MODEL=${_EMBEDDING_MODEL}
+      - --command=python
+      - --args=scripts/run_ingestion_pipeline.py,--csv,/mnt/data/incoming/products.csv,--output,/mnt/data/releases/manual/faiss.index,--run-id,manual
+      - --add-volume=name=data,type=cloud-storage,bucket=${_FAISS_BUCKET},mount-options=uid=10001;gid=10001
+      - --add-volume-mount=volume=data,mount-path=/mnt/data
+      - --cpu=4
+      - --memory=8Gi
+      - --task-timeout=24h
+      - --max-retries=0
+
+  - id: migrate
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - execute
+      - ${_SERVICE_NAME}-migrate
+      - --region=${_REGION}
+      - --wait
+
+  - id: deploy-api
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE_NAME}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID
+      - --region=${_REGION}
+      - --service-account=${_API_SA_NAME}@$PROJECT_ID.iam.gserviceaccount.com
+      - --set-cloudsql-instances=${_CLOUD_SQL_INSTANCE}
+      - --set-secrets=DATABASE_URL=${_DATABASE_URL_SECRET}:latest,GEMINI_API_KEY=${_GEMINI_API_KEY_SECRET}:latest
+      - --set-env-vars=ENVIRONMENT=production,ENABLE_CACHE=false,ENABLE_PII_DETECTION=true,EMBEDDING_DIMENSION=3072,EMBEDDING_MODEL=${_EMBEDDING_MODEL},FAISS_INDEX_PATH=/mnt/faiss/current/faiss.index,DB_POOL_SIZE=5,DB_MAX_OVERFLOW=2,LOG_TO_FILE=false,CORS_ORIGINS=${_CORS_ORIGINS}
+      - --command=uvicorn
+      - --args=app2.main:app,--host,0.0.0.0,--port,8080,--workers,1
+      - --add-volume=name=faiss,type=cloud-storage,bucket=${_FAISS_BUCKET},readonly=true,mount-options=uid=10001;gid=10001
+      - --add-volume-mount=volume=faiss,mount-path=/mnt/faiss
+      - --execution-environment=gen2
+      - --cpu=2
+      - --memory=4Gi
+      - --concurrency=20
+      - --min-instances=1
+      - --max-instances=10
+      - --timeout=60
+      - --startup-probe=httpGet.path=/api/v1/health,initialDelaySeconds=0,timeoutSeconds=5,periodSeconds=5,failureThreshold=24
+      - --liveness-probe=httpGet.path=/api/v1/health,initialDelaySeconds=10,timeoutSeconds=5,periodSeconds=30,failureThreshold=3
+      - --no-allow-unauthenticated
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 3600s

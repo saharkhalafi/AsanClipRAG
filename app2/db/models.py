@@ -162,7 +162,16 @@ class AsanClipProduct(Base):
 
     embedding_vector = Column(Vector(3072), nullable=True)
 
-    tag_status = Column(Text, default="done")
+    tag_status = Column(Text, default="done", server_default="done")
+    content_hash = Column(String(64), nullable=True, index=True)
+    embedding_status = Column(Text, nullable=False, default="pending", server_default="pending")
+    embedding_model = Column(String(128), nullable=True)
+    embedding_updated_at = Column(DateTime(timezone=True), nullable=True)
+    embedding_claimed_at = Column(DateTime(timezone=True), nullable=True)
+    embedding_claim_token = Column(String(64), nullable=True)
+    embedding_attempts = Column(Integer, nullable=False, default=0, server_default="0")
+    embedding_error = Column(Text, nullable=True)
+    ingestion_run_id = Column(String(64), nullable=True, index=True)
     url = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -52,7 +52,7 @@ class VectorSearchService:
         # -----------------------------
         # 1. FAISS SEARCH
         # -----------------------------
-        if self.use_faiss and self.faiss.index is not None:
+        if self.use_faiss and self.faiss.index is not None and not where_clause.strip():
             try:
                 if candidate_ids:
                     k = min(500, max(limit * 4, len(candidate_ids) * 3))
@@ -62,7 +62,10 @@ class VectorSearchService:
                 if candidate_ids:
                     candidate_set = set(candidate_ids)
                     results = [r for r in results if r[0] in candidate_set]
-                return self._hydrate_faiss_results(results, mode, limit)
+                hydrated = self._hydrate_faiss_results(results, mode, limit)
+                if hydrated:
+                    return hydrated
+                logger.warning("FAISS returned no usable rows; using pgvector fallback")
             except Exception as exc:
                 logger.warning("FAISS search failed, using pgvector: %s", exc)
 
@@ -71,6 +74,7 @@ class VectorSearchService:
         # -----------------------------
         base_where = [
             "tag_status = 'done'",
+            "embedding_status = 'done'",
             "embedding_vector IS NOT NULL"
         ]
 
@@ -93,10 +97,12 @@ class VectorSearchService:
                 product_type,
                 occasion,
                 platform,
-                embedding_vector <-> CAST(:query_vector AS vector) AS distance
+                CAST(embedding_vector AS halfvec(3072))
+                    <=> CAST(:query_vector AS halfvec(3072)) AS distance
             FROM asanclipproducts
             WHERE {final_where}
-            ORDER BY embedding_vector <-> CAST(:query_vector AS vector)
+            ORDER BY CAST(embedding_vector AS halfvec(3072))
+                <=> CAST(:query_vector AS halfvec(3072))
             LIMIT :limit
         """)
 
@@ -114,7 +120,8 @@ class VectorSearchService:
         results = []
         for r in rows:
             row = r._mapping
-            distance = float(row.get("distance") or 1.0)
+            raw_distance = row.get("distance")
+            distance = 1.0 if raw_distance is None else float(raw_distance)
             vector_score = max(0.0, 1.0 - distance)
 
             results.append({
@@ -160,6 +167,7 @@ class VectorSearchService:
             FROM asanclipproducts
             WHERE id = ANY(:ids)
               AND tag_status = 'done'
+              AND embedding_status = 'done'
         """)
 
         try:

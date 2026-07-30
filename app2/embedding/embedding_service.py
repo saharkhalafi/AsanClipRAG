@@ -10,9 +10,9 @@ from google import genai
 from httpx import ConnectError, ConnectTimeout
 from tenacity import (
     retry,
-    retry_if_exception_type,
+    retry_if_exception,
     stop_after_attempt,
-    wait_exponential,
+    wait_random_exponential,
 )
 
 from app2.exceptions import DatabaseError, ValidationError
@@ -22,6 +22,17 @@ from ..cache.cache_service import CacheService
 logger = logging.getLogger("app2.embedding")
 
 
+def _is_transient_embedding_error(exc: BaseException) -> bool:
+    if isinstance(exc, (ConnectError, ConnectTimeout)):
+        return True
+    status = getattr(exc, "status_code", None) or getattr(exc, "code", None)
+    try:
+        status_code = int(status)
+    except (TypeError, ValueError):
+        return False
+    return status_code == 429 or status_code >= 500
+
+
 class EmbeddingService:
     def __init__(self):
         api_key = os.getenv("GEMINI_API_KEY")
@@ -29,14 +40,15 @@ class EmbeddingService:
             raise ValidationError("GEMINI_API_KEY is not set")
 
         self.client = genai.Client(api_key=api_key)
-        self.model = "gemini-embedding-001"
+        self.model = os.getenv("EMBEDDING_MODEL", "gemini-embedding-001")
         self.cache = CacheService()
 
     # 🚨 مهم: ValidationError داخل retry نباید باشد
     @retry(
-        stop=stop_after_attempt(4),
-        wait=wait_exponential(multiplier=1.5, min=2, max=15),
-        retry=retry_if_exception_type((ConnectError, ConnectTimeout))
+        stop=stop_after_attempt(5),
+        wait=wait_random_exponential(multiplier=1.5, min=2, max=30),
+        retry=retry_if_exception(_is_transient_embedding_error),
+        reraise=True,
     )
     def _call_gemini(self, text: str):
         start_time = time.perf_counter()

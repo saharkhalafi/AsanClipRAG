@@ -83,6 +83,7 @@ def faiss_index_status() -> dict:
         return {
             "loaded": True,
             "path": FAISS_INDEX_PATH,
+            "version": os.getenv("FAISS_INDEX_VERSION"),
             "vectors": int(index.index.ntotal),
             "dimension": EMBEDDING_DIMENSION,
         }

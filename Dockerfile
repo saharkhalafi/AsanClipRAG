@@ -77,7 +77,10 @@ COPY docker/entrypoint.sh /entrypoint.sh
 
 # Runtime directories
 
-RUN useradd \
+RUN groupadd --gid 10001 appuser && \
+    useradd \
+        --uid 10001 \
+        --gid 10001 \
         --create-home \
         --shell /bin/bash \
         appuser && \
@@ -100,4 +103,4 @@ EXPOSE 8000
 
 ENTRYPOINT ["/entrypoint.sh"]
 
-CMD ["uvicorn", "app2.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["sh", "-c", "exec uvicorn app2.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers ${UVICORN_WORKERS:-1}"]
