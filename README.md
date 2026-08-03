@@ -28,7 +28,7 @@ Offline evaluation on **100** labeled queries after retrieval-quality fixes:
 | **Precision@10** | 0.239 | **0.365** | +53% |
 | **nDCG@10** | 0.484 | **0.595** | +23% |
 | **Hit Rate@10** | 0.756 | **0.805** | +6.5% |
-| **Failed (0 results)** | 6 | **4** | −2 |
+| **Failed (0 results)** | 6 | **0** | 100% |
 
 ### Latency
 
@@ -388,17 +388,6 @@ Packaging lesson learned:
 - Optional learned reranker (only if justified by offline & online metrics)
 - Rich observability dashboards
 - Horizontal scaling (stateless API + shared cache + managed PostgreSQL)
-
----
-
-# Contributing
-
-1. Create a branch from `develop` (or the default development branch)
-2. Keep pull requests focused
-3. Run lint and tests locally whenever possible
-4. Open a Pull Request targeting the integration branch
-
-See `CONTRIBUTING.md` if available.
 
 ---
 
