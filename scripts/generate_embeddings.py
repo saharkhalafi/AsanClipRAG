@@ -9,11 +9,10 @@ import uuid
 from typing import Any
 
 import numpy as np
-from sqlalchemy import create_engine, text
-
 from app2.config.constants import EMBEDDING_DIMENSION
 from app2.embedding.embedding_service import get_embedding_service
 from app2.ingestion import build_product_rag_text, product_content_hash
+from sqlalchemy import create_engine, text
 
 CLAIM_SQL = text(
     """

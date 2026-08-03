@@ -1,9 +1,8 @@
 import os
 
+from app2.db.url import get_database_url
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-from app2.db.url import get_database_url
 
 DATABASE_URL = get_database_url()
 

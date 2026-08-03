@@ -5,11 +5,10 @@ from __future__ import annotations
 import argparse
 import os
 
-from sqlalchemy import create_engine, text
-
 from scripts.build_faiss_index import build_faiss_index
 from scripts.generate_embeddings import generate_embeddings
 from scripts.ingest_products import ingest_csv
+from sqlalchemy import create_engine, text
 
 PIPELINE_LOCK_NAME = "asanclip:ingestion-pipeline"
 

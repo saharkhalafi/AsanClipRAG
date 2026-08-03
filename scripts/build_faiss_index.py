@@ -13,10 +13,9 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from sqlalchemy import create_engine, text
-
 from app2.config.constants import EMBEDDING_DIMENSION, FAISS_INDEX_PATH
 from app2.retrieval.faiss_index import FaissIndex
+from sqlalchemy import create_engine, text
 
 SELECT_SQL = text(
     """
