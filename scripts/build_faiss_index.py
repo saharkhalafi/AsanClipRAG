@@ -13,14 +13,13 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from sqlalchemy import create_engine, text
-
 from app2.config.constants import EMBEDDING_DIMENSION, FAISS_INDEX_PATH
 from app2.retrieval.faiss_index import FaissIndex
+from sqlalchemy import create_engine, text
 
 SELECT_SQL = text(
     """
-    SELECT id, embedding_vector, embedding_model, updated_at
+    SELECT id, embedding_vector::text AS embedding_vector, embedding_model, updated_at
     FROM asanclipproducts
     WHERE embedding_vector IS NOT NULL
       AND tag_status = 'done'
@@ -28,6 +27,21 @@ SELECT_SQL = text(
     ORDER BY id
     """
 )
+
+
+def _parse_embedding(raw: Any, dimension: int, product_id: int) -> np.ndarray:
+    if isinstance(raw, str):
+        vector = np.asarray(json.loads(raw), dtype=np.float32)
+    else:
+        vector = np.asarray(raw, dtype=np.float32)
+    if vector.ndim != 1 or vector.shape[0] != dimension:
+        raise ValueError(
+            f"Product id={product_id} has embedding shape {vector.shape}; "
+            f"expected ({dimension},)"
+        )
+    if not np.isfinite(vector).all():
+        raise ValueError(f"Product id={product_id} has a non-finite embedding")
+    return vector
 
 
 def _sha256(path: Path) -> str:
@@ -50,14 +64,7 @@ def _load_snapshot(database_url: str, dimension: int) -> tuple[np.ndarray, list[
         with conn.begin():
             conn.execute(text("SELECT pg_advisory_xact_lock(hashtext('asanclip:faiss-build'))"))
             for row in conn.execute(SELECT_SQL):
-                vector = np.asarray(row.embedding_vector, dtype=np.float32)
-                if vector.ndim != 1 or vector.shape[0] != dimension:
-                    raise ValueError(
-                        f"Product id={row.id} has embedding shape {vector.shape}; "
-                        f"expected ({dimension},)"
-                    )
-                if not np.isfinite(vector).all():
-                    raise ValueError(f"Product id={row.id} has a non-finite embedding")
+                vector = _parse_embedding(row.embedding_vector, dimension, int(row.id))
                 ids.append(int(row.id))
                 vectors.append(vector)
                 if row.embedding_model:

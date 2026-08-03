@@ -14,9 +14,8 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-from sqlalchemy import create_engine, text
-
 from app2.ingestion import build_product_rag_text, product_content_hash
+from sqlalchemy import create_engine, text
 
 REQUIRED_COLUMNS = {"id", "name"}
 

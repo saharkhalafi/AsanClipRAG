@@ -1,0 +1,22 @@
+displayName: Cloud Run High Latency p95
+
+combiner: OR
+
+conditions:
+- displayName: Cloud Run latency p95 > 2s
+  conditionThreshold:
+    filter: |
+      resource.type="cloud_run_revision"
+      resource.labels.service_name="asanclip-api"
+      metric.type="run.googleapis.com/request_latencies"
+    aggregations:
+    - alignmentPeriod: 300s
+      perSeriesAligner: ALIGN_PERCENTILE_95
+    comparison: COMPARISON_GT
+    thresholdValue: 2000
+    duration: 300s
+    trigger:
+      count: 1
+
+notificationChannels:
+- projects/asanclip-rag-prod/notificationChannels/16725964553696422189

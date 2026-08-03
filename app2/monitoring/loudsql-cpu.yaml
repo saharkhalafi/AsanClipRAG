@@ -1,0 +1,26 @@
+displayName: "AsanClip Container Restart"
+combiner: OR
+
+
+conditions:
+
+- displayName: "CPU > 80%"
+
+  conditionThreshold:
+
+    filter: >
+      resource.type="cloudsql_database"
+      resource.labels.database_id="asanclip-rag-prod:asanclip-db-prod"
+      metric.type="cloudsql.googleapis.com/database/cpu/utilization"
+
+    comparison: COMPARISON_GT
+
+    thresholdValue: 0.8
+
+    duration: 600s
+
+
+notificationChannels:
+- projects/asanclip-rag-prod/notificationChannels/16725964553696422189
+
+#gcloud monitoring policies create --policy-from-file app2/monitoring/loudsql-cpu.yaml --project=asanclip-rag-prod

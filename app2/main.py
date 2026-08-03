@@ -87,6 +87,8 @@ app.add_exception_handler(Exception, general_exception_handler)
 # ======================
 app.include_router(search_router, prefix="/api/v1")
 app.include_router(health_router, prefix="/api/v1")
+app.include_router(health_router)
+
 
 # ======================
 # Root

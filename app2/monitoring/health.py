@@ -28,12 +28,26 @@ async def readiness_check(db: Session = Depends(get_db)):
     try:
         db.execute(text("SELECT 1")).scalar()
 
+        cache_status = "disabled"
+        if settings.ENABLE_CACHE:
+            try:
+                from app2.cache.cache_service import CacheService
+
+                cache = CacheService()
+                if cache.enabled and cache.redis is not None:
+                    cache.redis.ping()
+                    cache_status = "connected"
+                else:
+                    cache_status = "unavailable"
+            except Exception:
+                cache_status = "unavailable"
+
         from app2.bootstrap import faiss_index_status
 
         return {
             "status": "ready",
             "database": "connected",
-            "cache": "enabled" if settings.ENABLE_CACHE else "disabled",
+            "cache": cache_status,
             "faiss": faiss_index_status(),
         }
     except Exception as exc:

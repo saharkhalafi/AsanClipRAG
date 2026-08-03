@@ -1,0 +1,16 @@
+displayName: "AsanClip Cloud SQL Storage"
+
+combiner: OR
+
+conditions:
+- displayName: "Cloud SQL disk utilization above 85%"
+  conditionThreshold:
+    filter: >
+      resource.type="cloudsql_database"
+      metric.type="cloudsql.googleapis.com/database/disk/utilization"
+    comparison: COMPARISON_GT
+    thresholdValue: 0.85
+    duration: 600s
+
+notificationChannels:
+- projects/asanclip-rag-prod/notificationChannels/16725964553696422189

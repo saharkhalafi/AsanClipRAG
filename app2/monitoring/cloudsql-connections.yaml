@@ -1,0 +1,21 @@
+displayName: "AsanClip Cloud SQL Connections"
+combiner: OR
+conditions:
+
+- displayName: "Connections too high"
+
+  conditionThreshold:
+
+    filter: >
+      resource.type="cloudsql_database"
+      metric.type="cloudsql.googleapis.com/database/postgresql/num_backends"
+
+    comparison: COMPARISON_GT
+
+    thresholdValue: 80
+
+    duration: 300s
+
+
+notificationChannels:
+- projects/asanclip-rag-prod/notificationChannels/16725964553696422189

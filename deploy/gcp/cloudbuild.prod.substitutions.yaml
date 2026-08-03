@@ -1,0 +1,20 @@
+# Production substitutions for deploy/gcp/cloudbuild.deploy.yaml
+# Usage:
+#   gcloud builds submit --config deploy/gcp/cloudbuild.deploy.yaml \
+#     --substitutions-from-file deploy/gcp/cloudbuild.prod.substitutions.yaml \
+#     --region europe-west4 .
+substitutions:
+  _REGION: europe-west4
+  _AR_REPOSITORY: asanclip
+  _IMAGE_NAME: api
+  _SERVICE_NAME: asanclip-api
+  _API_SA_NAME: sa-cloudrun-asanclip
+  _PIPELINE_SA_NAME: sa-cloudrun-asanclip
+  _CLOUD_SQL_INSTANCE: asanclip-rag-prod:europe-west1:asanclip-db-prod
+  _DATABASE_URL_SECRET: database-url
+  _PIPELINE_DATABASE_URL_SECRET: database-url
+  _GEMINI_API_KEY_SECRET: gemini-api-key
+  _REDIS_URL_SECRET: redis-url
+  _FAISS_BUCKET: sale1404
+  _EMBEDDING_MODEL: gemini-embedding-001
+  _CORS_ORIGINS: https://CHANGE_ME.example

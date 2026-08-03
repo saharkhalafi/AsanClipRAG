@@ -76,7 +76,7 @@ class FaissIndex:
         with open(self.index_path.with_suffix(".pkl"), "wb") as f:
             pickle.dump(self.id_map, f)
 
-        print(f"✅ FAISS index built with {len(product_ids)} vectors")
+        print(f"FAISS index built with {len(product_ids)} vectors")
 
     # =====================================================
     # LOAD INDEX

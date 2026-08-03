@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-
 from app2.ingestion import build_product_rag_text, product_content_hash
 from app2.retrieval.faiss_index import FaissIndex
 from scripts import build_faiss_index

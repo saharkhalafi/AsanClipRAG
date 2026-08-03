@@ -1,12 +1,10 @@
 import os
 
+from app2.db.url import get_database_url
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is not set in environment variables")
+DATABASE_URL = get_database_url()
 
 engine = create_engine(
     DATABASE_URL,
