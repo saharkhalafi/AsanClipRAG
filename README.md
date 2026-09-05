@@ -16,7 +16,10 @@ AsanClip helps users find the right video templates using natural language (Pers
 - **Production ops**: Docker, Alembic, structured `retrieval_logs`, GitHub Actions CI
 
 ---
+# Architecture
+![Screenshot](https://github.com/saharkhalafi/AsanClipRAG/blob/main/app2/docs/Asanclip_arch.png)
 
+---
 ## Evaluation (Golden Set)
 
 Offline evaluation on **100** labeled queries after retrieval-quality fixes:
@@ -36,57 +39,6 @@ Offline evaluation on **100** labeled queries after retrieval-quality fixes:
 - **Cached queries:** ~80–170 ms
 
 Main quality gains came from deeper candidates, correct BM25→lexical scoring, stronger hybrid fusion, Persian synonym handling, and metadata boost fixes — without a latency regression.
-
----
-
-# Architecture
-
-```text
-                           User Query
-                               │
-                               ▼
-                   FastAPI (/api/v1/search)
-                               │
-                               ▼
-                        Query Firewall
-        (abuse · injection · cost · relevance · semantic intent)
-                               │
-                               ▼
-                     SearchOrchestrator
-                               │
-      ┌────────────────────────┼────────────────────────┐
-      │                        │                        │
-      ▼                        ▼                        ▼
-Query preprocess        Synonym expansion      Metadata extraction
-      │                        │                        │
-      └────────────────────────┼────────────────────────┘
-                               ▼
-                     Candidate Generation
-                               │
-                               ▼
-                  RetrievalOrchestrator
-      ┌────────────────────────┼────────────────────────┐
-      │                        │                        │
-      ▼                        ▼                        ▼
- Vector Search             BM25 Search          Metadata Search
-(FAISS → pgvector)      (+ Persian fallback)
-      │                        │                        │
-      └────────────────────────┼────────────────────────┘
-                               ▼
-                   Hybrid Fusion & Retry Logic
-                               │
-                               ▼
-                           Ranking
-      (UnifiedRanker · metadata boost · alignment)
-                               │
-                               ▼
-               Top 5 Products + Unique Captions
-                               │
-                               ▼
-          Observability (isolated retrieval_logs session)
-```
-
-> **Design principle:** Maintain a large internal candidate pool to maximize ranking quality, then expose only a compact top-k response to clients.
 
 ---
 
